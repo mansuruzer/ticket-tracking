@@ -113,3 +113,14 @@ def test_scheduler_tick_runs_watch_and_radar(svc):
 def test_split_message():
     parts = split_message("\n\n".join(["x" * 1500] * 5), limit=4000)
     assert all(len(p) <= 4000 for p in parts) and len(parts) >= 2
+
+
+def test_admin_invite_and_single_use(svc, bot):
+    admin = svc.db.add_user("Admin", is_admin=True)
+    bot.handle(msg(f"/start {admin['tg_invite']}", chat=1))
+    out = bot.handle(msg("/davet Ali", chat=1))
+    code = out.split("/start ")[1].split("<")[0]
+    assert "Ali" in out and "bağlandı" in bot.handle(msg(f"/start {code}", chat=2))
+    assert "kullanılmış" in bot.handle(msg(f"/start {code}", chat=3))      # başkası kullanamaz
+    assert "yönetici" in bot.handle(msg("/davet Veli", chat=2)).lower()     # admin olmayan
+    assert "Ali" in bot.handle(msg("/kullanicilar", chat=1))

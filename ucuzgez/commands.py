@@ -26,6 +26,7 @@ HELP = """<b>UcuzGez komutları</b>
 <b>/takipler</b> · <b>/sil</b> 3
 <b>/konum</b> — konumunu paylaş (yakın havalimanlarından arar) · <b>/ev</b> IST · <b>/yaricap</b> 200
 <b>/radar</b> — fırsat radarını şimdi çalıştır (normalde her sabah otomatik)
+<b>/davet</b> İsim · <b>/kullanicilar</b> — (yönetici) arkadaş davet et / kullanıcıları gör
 """
 
 _DATE_RES = [

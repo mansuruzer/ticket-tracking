@@ -133,6 +133,8 @@ class DB:
         u = self.one("SELECT * FROM users WHERE tg_invite=?", (invite,))
         if not u:
             return None
+        if u["tg_chat_id"] and u["tg_chat_id"] != chat_id:
+            return None          # kod zaten başka bir Telegram hesabına bağlı (tek kullanımlık)
         with self.tx() as c:
             c.execute("UPDATE users SET tg_chat_id=NULL WHERE tg_chat_id=?", (chat_id,))
             c.execute("UPDATE users SET tg_chat_id=? WHERE id=?", (chat_id, u["id"]))

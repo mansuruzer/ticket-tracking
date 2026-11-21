@@ -128,7 +128,7 @@ class TelegramBot:
             if len(parts) == 2:
                 u = db.link_telegram(parts[1], chat_id)
                 if not u:
-                    return "Davet kodu geçersiz."
+                    return "Davet kodu geçersiz ya da daha önce kullanılmış. Yöneticiden yeni kod iste."
                 return (f"Merhaba {u['name']}! Hesabın bağlandı. 📍 /konum ile konumunu paylaş, "
                         f"sonra /kesfet yaz.\n\n" + HELP)
             return "Davet kodunla başla: /start KOD" if not user else HELP
@@ -186,6 +186,23 @@ class TelegramBot:
             if not args or not args[0].lstrip("#").isdigit():
                 return "Kullanım: /sil 3"
             return "Silindi." if db.delete_watch(user["id"], int(args[0].lstrip("#"))) else "Bulunamadı."
+        if cmd == "/davet":
+            if not user["is_admin"]:
+                return "Davet oluşturma sadece yöneticide."
+            name = " ".join(args).strip() or "Misafir"
+            if db.count_users() >= 50:
+                return "50 kullanıcı sınırı doldu."
+            u = db.add_user(name)
+            base = self.svc.s.base_url.rstrip("/")
+            return (f"✅ <b>{name}</b> için davet hazır. Aşağıdaki mesajı ona ilet:\n\n"
+                    f"UcuzGez'e davetlisin ✈️\n1) Telegram'da bota şunu yaz: <code>/start {u['tg_invite']}</code>\n"
+                    f"2) Web: {base}/giris?t={u['token']}")
+        if cmd == "/kullanicilar":
+            if not user["is_admin"]:
+                return "Bu komut sadece yöneticide."
+            rows = db.all_users()
+            return "\n".join(f"#{r['id']} {r['name']} · {'✅ bağlı' if r['tg_chat_id'] else '⏳ bekliyor'}"
+                             + (f" · kod {r['tg_invite']}" if not r['tg_chat_id'] else "") for r in rows)
         if cmd == "/radar":
             self.send(chat_id, "🎯 Taranıyor…")
             r = self.svc.radar(user)
