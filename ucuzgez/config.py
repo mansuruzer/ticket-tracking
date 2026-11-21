@@ -44,6 +44,10 @@ class Settings:
     ground_base_eur: float
     ground_eur_per_km: float
     max_ground_hours: float
+    turso_url: str
+    turso_token: str
+    cron_secret: str
+    tg_webhook_secret: str
 
 
 def load_settings() -> Settings:
@@ -70,4 +74,8 @@ def load_settings() -> Settings:
         ground_base_eur=float(_get("UG_GROUND_BASE_EUR", "5")),
         ground_eur_per_km=float(_get("UG_GROUND_EUR_PER_KM", "0.06")),
         max_ground_hours=float(_get("UG_MAX_GROUND_HOURS", "6")),
+        turso_url=_get("TURSO_DATABASE_URL"),
+        turso_token=_get("TURSO_AUTH_TOKEN"),
+        cron_secret=_get("CRON_SECRET"),
+        tg_webhook_secret=_get("TELEGRAM_WEBHOOK_SECRET"),
     )

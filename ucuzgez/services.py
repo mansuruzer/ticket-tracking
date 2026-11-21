@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 class Services:
     def __init__(self, settings: Settings):
         self.s = settings
-        self.db = DB(settings.db_path)
+        self.db = DB(settings.db_path, settings.turso_url, settings.turso_token)
         self.airports = get_airports()
         self.search = build_search(settings, self.airports, self.db)
         self.ground = GroundEstimator(self.airports, settings.ground_base_eur, settings.ground_eur_per_km)

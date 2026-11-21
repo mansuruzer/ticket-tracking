@@ -10,11 +10,23 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from datetime import datetime
 
 from .services import Services
 
 log = logging.getLogger(__name__)
+
+
+def local_now() -> datetime:
+    """Sunucu UTC'de olsa bile Türkiye saatini kullan (UG_TZ ile değiştirilebilir)."""
+    import os
+    from datetime import timedelta, timezone
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo(os.environ.get("UG_TZ", "Europe/Istanbul"))).replace(tzinfo=None)
+    except Exception:
+        return datetime.now(timezone(timedelta(hours=3))).replace(tzinfo=None)
 
 
 class Scheduler:
@@ -37,10 +49,17 @@ class Scheduler:
     def stop(self) -> None:
         self._stop.set()
 
-    def tick(self, now: datetime | None = None) -> None:
-        now = now or datetime.now()
+    def tick(self, now: datetime | None = None, deadline_s: float | None = None) -> dict:
+        """Bir tur. deadline_s: sunucusuz modda süre sınırı (saniye) — aşılmadan durur."""
+        start = time.monotonic()
+        out_of_time = lambda: deadline_s is not None and time.monotonic() - start > deadline_s
+        now = now or local_now()
         db = self.svc.db
+        stats = {"watches": 0, "radar_users": 0}
         for w in db.due_watches(self.svc.s.watch_interval_min * 60)[: self.per_tick]:
+            if out_of_time():
+                return stats
+            stats["watches"] += 1
             msg = self.svc.check_watch(w)
             if msg:
                 self.notify(db.user(w["user_id"]), msg)
@@ -51,6 +70,13 @@ class Scheduler:
             for u in db.all_users():
                 if not u["tg_chat_id"]:
                     continue
+                if out_of_time():
+                    db.kv_set("radar_day", None)   # bitmedi, bir sonraki turda devam
+                    return stats
+                if db.last_notified(u["id"], "radar_run", today, 86400):
+                    continue                       # bu kullanıcı bugün tarandı
+                db.mark_notified(u["id"], "radar_run", today, 0)
+                stats["radar_users"] += 1
                 try:
                     msg = self.svc.radar(u)
                     if msg:
@@ -58,3 +84,4 @@ class Scheduler:
                 except Exception:
                     log.exception("radar hata (kullanıcı %s)", u["id"])
             db.cache_purge()
+        return stats

@@ -87,6 +87,23 @@ class TelegramBot:
     def stop(self) -> None:
         self._stop.set()
 
+    # ---- webhook modu (Vercel / sunucusuz) -----------------------------------------
+    def process_update(self, upd: dict) -> None:
+        """Telegram aynı güncellemeyi tekrar gönderirse (zaman aşımı) ikinci kez işleme."""
+        uid = int(upd.get("update_id", 0))
+        if uid <= int(self.svc.db.kv_get("tg_last_update") or 0):
+            return
+        self.svc.db.kv_set("tg_last_update", uid)
+        msg = upd.get("message")
+        if msg:
+            self._safe_handle(msg)
+
+    def set_webhook(self, url: str, secret: str) -> dict:
+        r = self.http.post(f"{self.api}/setWebhook", json={
+            "url": url, "secret_token": secret, "allowed_updates": ["message"],
+            "max_connections": 5}, timeout=20)
+        return r.json()
+
     def _safe_handle(self, msg: dict) -> None:
         chat_id = msg["chat"]["id"]
         try:

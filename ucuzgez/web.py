@@ -22,7 +22,7 @@ AIRLINE_CHOICES = [("PC", "Pegasus"), ("VF", "AJet"), ("TK", "THY"), ("W6", "Wiz
                    ("FR", "Ryanair"), ("U2", "easyJet"), ("XQ", "SunExpress")]
 
 
-def create_web_app(svc: Services, lifespan=None) -> Starlette:
+def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = None) -> Starlette:
     ap = svc.airports
     cur = svc.s.currency
     TEMPLATES.env.globals.update(
@@ -163,4 +163,5 @@ def create_web_app(svc: Services, lifespan=None) -> Starlette:
         Route("/ev", set_home, methods=["POST"]),
         Route("/api/ara", api_search),
         Route("/saglik", health),
+        *(extra_routes or []),
     ], lifespan=lifespan)

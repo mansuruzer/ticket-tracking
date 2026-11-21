@@ -36,7 +36,7 @@ Neden Amadeus ya da Kiwi değil? Amadeus self-service API'leri 17 Temmuz 2026'da
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env              # UG_PROVIDER=mock ile anahtarsız da çalışır
 python -m ucuzgez.cli add-user "Mansur" --admin   # web linki + Telegram davet kodu verir
 python -m ucuzgez                  # http://localhost:8000
@@ -74,7 +74,36 @@ Bir aramanın maliyeti ≈ 1 + (12 şehir × ~4 dönüş şehri) ay-sorgusu. Son
 
 ---
 
-## 💸 7/24 ücretsiz çalıştırma
+## ▲ Vercel'de ücretsiz, kartsız, sunucusuz kurulum (önerilen)
+
+Bu modda arka planda sürekli açık bir süreç gerekmez. Telegram mesajları webhook ile gelir, zamanlayıcı dışarıdan tetiklenir, veriler Turso'da (ücretsiz uzak SQLite) durur. Kullanılan her şey ücretsiz ve kart istemiyor.
+
+```
+Telegram ──webhook──► Vercel (api/index.py → ucuzgez/serverless.py) ◄── tarayıcı
+GitHub Actions (3 saatte 1) ──► /cron ─┘          │
+Vercel Cron (günde 1, yedek)  ──► /cron           ▼
+                                           Turso (SQLite, HTTP)
+```
+
+1. **Turso:** app.turso.tech → GitHub ile giriş → *Create database* (bölge: Frankfurt) → veritabanı URL'sini (`libsql://...turso.io`) ve bir *token* al.
+2. **Vercel:** vercel.com → GitHub ile giriş → *Add New → Project* → `ticket-tracking` reposunu *Import* et → *Environment Variables* bölümüne şunları gir:
+   | Değişken | Değer |
+   |---|---|
+   | `UG_PROVIDER` | `travelpayouts` (anahtar yoksa önce `mock`) |
+   | `TRAVELPAYOUTS_TOKEN` | Travelpayouts token |
+   | `TELEGRAM_BOT_TOKEN` | @BotFather token |
+   | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | 1. adımdan |
+   | `CRON_SECRET`, `TELEGRAM_WEBHOOK_SECRET` | iki ayrı rastgele uzun dize |
+   | `UG_EUR_RATE` | `54` (arada güncelle) |
+
+   → **Deploy**. Adresin `https://PROJE.vercel.app` olur.
+3. **Telegram'ı bağla (tek seferlik):** tarayıcıda `https://PROJE.vercel.app/tg/kur?key=CRON_SECRET` adresini aç. `{"ok":true}` görmelisin.
+4. **İlk kullanıcı:** `https://PROJE.vercel.app/yonetim/kullanici?key=CRON_SECRET&ad=Mansur` web giriş linkini ve Telegram davet kodunu verir. Aynı adres `ad` parametresi olmadan açılırsa bütün kullanıcıları listeler.
+5. **3 saatte bir kontrol:** GitHub'da repo → *Settings → Secrets and variables → Actions* → `APP_URL` (=`https://PROJE.vercel.app`) ve `CRON_SECRET` ekle. `.github/workflows/cron.yml` otomatik çalışır. Vercel Hobby cron'u günde yalnız bir kez çalıştırdığı için bu adım gerekli.
+
+Notlar: Vercel Hobby'de bir fonksiyon en fazla 300 sn çalışabilir. `/cron` 240 sn'de durur, yarım kalan iş bir sonraki tetiklemede devam eder. Telegram bir mesajı tekrar gönderirse (`update_id`) ikinci kez işlenmez. Vercel Hobby kişisel ve ticari olmayan kullanım içindir; bu proje de öyle.
+
+## 💸 Alternatif: kendi sunucunda 7/24 (Oracle Always Free / ev bilgisayarı)
 
 Bu uygulama sürekli açık bir süreç istiyor (Telegram long-polling + zamanlayıcı). O yüzden "boşta kalınca uyuyan" ücretsiz platformlar uygun değil. Render'ın ücretsiz servisi 15 dakika istek gelmezse uyuyor ve diski kalıcı değil. Bu durumda SQLite verileri yeniden başlatmada kaybolur.
 

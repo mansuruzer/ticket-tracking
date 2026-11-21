@@ -57,14 +57,18 @@ CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);
 
 
 class DB:
-    def __init__(self, path: str):
+    def __init__(self, path: str, turso_url: str = "", turso_token: str = ""):
         self.path = path
+        self.turso = (turso_url, turso_token) if turso_url else None
         self._local = threading.local()
         with self.tx() as c:
             c.executescript(SCHEMA)
 
     def _conn(self) -> sqlite3.Connection:
         c = getattr(self._local, "conn", None)
+        if c is None and self.turso:
+            from .libsql_http import LibsqlConnection
+            c = self._local.conn = LibsqlConnection(*self.turso)
         if c is None:
             c = sqlite3.connect(self.path, timeout=30, check_same_thread=False)
             c.row_factory = sqlite3.Row
