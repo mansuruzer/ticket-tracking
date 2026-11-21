@@ -3,6 +3,5 @@
   "functions": {
     "api/index.py": { "maxDuration": 300, "includeFiles": "ucuzgez/**" }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }],
   "crons": [{ "path": "/cron", "schedule": "0 6 * * *" }]
 }

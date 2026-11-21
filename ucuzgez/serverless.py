@@ -57,6 +57,11 @@ def ensure_setup() -> list[str]:
     base = settings.base_url.rstrip("/")
     ok = True
     try:
+        with svc.db.tx() as c:
+            c.execute("DELETE FROM users WHERE is_admin=1 AND tg_chat_id IS NULL AND name='Yönetici'")
+    except Exception:
+        log.exception("temizlik hatası")
+    try:
         if bot and settings.tg_webhook_secret and base.startswith("https://"):
             url = f"{base}/tg/webhook"
             if svc.db.kv_get("tg_webhook_url") != url:
@@ -73,8 +78,15 @@ def ensure_setup() -> list[str]:
     try:
         if ADMIN_CHAT_ID.lstrip("-").isdigit() and not svc.db.user_by_chat(int(ADMIN_CHAT_ID)):
             u = svc.db.add_user("Yönetici", is_admin=True)
-            with svc.db.tx() as c:
-                c.execute("UPDATE users SET tg_chat_id=?, home_code='IST' WHERE id=?", (int(ADMIN_CHAT_ID), u["id"]))
+            try:
+                with svc.db.tx() as c:
+                    c.execute("UPDATE users SET tg_chat_id=?, home_code='IST' WHERE id=?",
+                              (int(ADMIN_CHAT_ID), u["id"]))
+            except Exception:
+                # Başka bir kopya aynı anda oluşturdu (yarış): fazlalığı sil, mesaj atma
+                with svc.db.tx() as c:
+                    c.execute("DELETE FROM users WHERE id=?", (u["id"],))
+                return done
             done.append("admin")
             if bot:
                 bot.send(int(ADMIN_CHAT_ID),
