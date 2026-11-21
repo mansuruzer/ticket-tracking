@@ -32,10 +32,74 @@ if not settings.turso_url and not os.environ.get("UG_DB_PATH"):
 if "localhost" in settings.base_url and os.environ.get("VERCEL_PROJECT_PRODUCTION_URL"):
     settings.base_url = "https://" + os.environ["VERCEL_PROJECT_PRODUCTION_URL"]
 
+if not settings.tg_webhook_secret and settings.cron_secret:
+    # Ayrı bir değişken girmeye gerek kalmasın: CRON_SECRET'tan türet
+    import hashlib
+    settings.tg_webhook_secret = hashlib.sha256((settings.cron_secret + "|tg").encode()).hexdigest()[:48]
+
 svc = Services(settings)
 bot = TelegramBot(settings.telegram_token, svc) if settings.telegram_token else None
 scheduler = Scheduler(svc, lambda u, t: bot.notify_user(u, t) if (bot and u) else None, per_tick=50)
 CRON_BUDGET_S = float(os.environ.get("UG_CRON_BUDGET_S", "240"))   # Vercel Hobby sınırı 300 sn
+
+
+ADMIN_CHAT_ID = os.environ.get("UG_ADMIN_CHAT_ID", "").strip()
+_setup_done = False
+
+
+def ensure_setup() -> list[str]:
+    """Her soğuk başlangıçta bir kez: webhook'u kaydet, yöneticiyi oluştur. Hatalar isteği bozmaz."""
+    global _setup_done
+    if _setup_done:
+        return []
+    _setup_done = True
+    done = []
+    base = settings.base_url.rstrip("/")
+    ok = True
+    try:
+        if bot and settings.tg_webhook_secret and base.startswith("https://"):
+            url = f"{base}/tg/webhook"
+            if svc.db.kv_get("tg_webhook_url") != url:
+                r = bot.set_webhook(url, settings.tg_webhook_secret)
+                if r.get("ok"):
+                    svc.db.kv_set("tg_webhook_url", url)
+                    done.append("webhook")
+                else:
+                    ok = False
+                    log.warning("setWebhook başarısız: %s", r)
+    except Exception:
+        ok = False
+        log.exception("webhook kurulamadı")
+    try:
+        if ADMIN_CHAT_ID.lstrip("-").isdigit() and not svc.db.user_by_chat(int(ADMIN_CHAT_ID)):
+            u = svc.db.add_user("Yönetici", is_admin=True)
+            with svc.db.tx() as c:
+                c.execute("UPDATE users SET tg_chat_id=?, home_code='IST' WHERE id=?", (int(ADMIN_CHAT_ID), u["id"]))
+            done.append("admin")
+            if bot:
+                bot.send(int(ADMIN_CHAT_ID),
+                         "✅ <b>UcuzGez kuruldu!</b>\n\n"
+                         f"🌐 Web girişin: {base}/giris?t={u['token']}\n"
+                         "🏠 Ev havalimanın IST olarak ayarlandı (/konum ile değiştir).\n\n"
+                         "Dene: /kesfet 3-5\nYardım: /yardim")
+    except Exception:
+        ok = False
+        log.exception("yönetici oluşturulamadı")
+    _setup_done = ok   # başarısızsa bir sonraki istekte tekrar dene
+    return done
+
+
+class AutoSetup:
+    """ASGI sarmalayıcı: ilk HTTP isteğinde ensure_setup() çalıştırır."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and not _setup_done:
+            from starlette.concurrency import run_in_threadpool
+            await run_in_threadpool(ensure_setup)
+        await self.app(scope, receive, send)
 
 
 def _authorized(request: Request) -> bool:
@@ -64,7 +128,10 @@ async def tg_setup(request: Request):
     if not bot or not settings.tg_webhook_secret:
         return JSONResponse({"error": "TELEGRAM_BOT_TOKEN ve TELEGRAM_WEBHOOK_SECRET gerekli"}, status_code=400)
     base = settings.base_url.rstrip("/")
-    return JSONResponse(bot.set_webhook(f"{base}/tg/webhook", settings.tg_webhook_secret))
+    r = bot.set_webhook(f"{base}/tg/webhook", settings.tg_webhook_secret)
+    if r.get("ok"):
+        svc.db.kv_set("tg_webhook_url", f"{base}/tg/webhook")
+    return JSONResponse(r)
 
 
 async def cron(request: Request):
@@ -92,9 +159,10 @@ async def admin_add_user(request: Request):
                          "telegram": f"/start {u['tg_invite']}"})
 
 
-app = create_web_app(svc, extra_routes=[
+_starlette = create_web_app(svc, extra_routes=[
     Route("/tg/webhook", tg_webhook, methods=["POST"]),
     Route("/tg/kur", tg_setup),
     Route("/cron", cron, methods=["GET", "POST"]),
     Route("/yonetim/kullanici", admin_add_user),
 ])
+app = AutoSetup(_starlette)

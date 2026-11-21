@@ -86,20 +86,19 @@ Vercel Cron (günde 1, yedek)  ──► /cron           ▼
 ```
 
 1. **Turso:** app.turso.tech → GitHub ile giriş → *Create database* (bölge: Frankfurt) → veritabanı URL'sini (`libsql://...turso.io`) ve bir *token* al.
-2. **Vercel:** vercel.com → GitHub ile giriş → *Add New → Project* → `ticket-tracking` reposunu *Import* et → *Environment Variables* bölümüne şunları gir:
+2. **Vercel:** vercel.com/new → GitHub ile giriş → `ticket-tracking` → *Import* → Framework: *Other* → *Environment Variables* bölümüne sadece şunları gir:
    | Değişken | Değer |
    |---|---|
-   | `UG_PROVIDER` | `travelpayouts` (anahtar yoksa önce `mock`) |
-   | `TRAVELPAYOUTS_TOKEN` | Travelpayouts token |
+   | `TURSO_DATABASE_URL` | 1. adımdaki `libsql://...` |
+   | `TURSO_AUTH_TOKEN` | 1. adımdaki token |
    | `TELEGRAM_BOT_TOKEN` | @BotFather token |
-   | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | 1. adımdan |
-   | `CRON_SECRET`, `TELEGRAM_WEBHOOK_SECRET` | iki ayrı rastgele uzun dize |
-   | `UG_EUR_RATE` | `54` (arada güncelle) |
+   | `CRON_SECRET` | rastgele uzun bir dize |
+   | `UG_ADMIN_CHAT_ID` | kendi Telegram chat id'n |
+   | `UG_PROVIDER` | `mock`; Travelpayouts token'ını alınca `travelpayouts` + `TRAVELPAYOUTS_TOKEN` |
 
-   → **Deploy**. Adresin `https://PROJE.vercel.app` olur.
-3. **Telegram'ı bağla (tek seferlik):** tarayıcıda `https://PROJE.vercel.app/tg/kur?key=CRON_SECRET` adresini aç. `{"ok":true}` görmelisin.
-4. **İlk kullanıcı:** `https://PROJE.vercel.app/yonetim/kullanici?key=CRON_SECRET&ad=Mansur` web giriş linkini ve Telegram davet kodunu verir. Aynı adres `ad` parametresi olmadan açılırsa bütün kullanıcıları listeler.
-5. **3 saatte bir kontrol:** GitHub'da repo → *Settings → Secrets and variables → Actions* → `APP_URL` (=`https://PROJE.vercel.app`) ve `CRON_SECRET` ekle. `.github/workflows/cron.yml` otomatik çalışır. Vercel Hobby cron'u günde yalnız bir kez çalıştırdığı için bu adım gerekli.
+   → **Deploy** → ardından **Visit**'e bas. İlk ziyarette sistem kendini kurar: Telegram webhook'unu kaydeder, seni yönetici olarak oluşturur ve Telegram'dan web giriş linkini gönderir.
+3. (Opsiyonel) Başka kullanıcı: `https://PROJE.vercel.app/yonetim/kullanici?key=CRON_SECRET&ad=Ali`
+4. (Opsiyonel, önerilir) **3 saatte bir kontrol:** GitHub'da repo → *Settings → Secrets and variables → Actions* → `APP_URL` (=`https://PROJE.vercel.app`) ve `CRON_SECRET` ekle. Bu yapılmazsa takipler sadece Vercel'in günlük cron'uyla, günde bir kez kontrol edilir. Repo public olduğu için GitHub Actions dakikaları ücretsiz ve sınırsız.
 
 Notlar: Vercel Hobby'de bir fonksiyon en fazla 300 sn çalışabilir. `/cron` 240 sn'de durur, yarım kalan iş bir sonraki tetiklemede devam eder. Telegram bir mesajı tekrar gönderirse (`update_id`) ikinci kez işlenmez. Vercel Hobby kişisel ve ticari olmayan kullanım içindir; bu proje de öyle.
 
