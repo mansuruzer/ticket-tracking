@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="card">
+  <h2>Gezi ara</h2>
+  <form method="post" action="/ara" id="f">
+    <div class="grid">
+      <div><label>Kalkış (boş = konumum{% if origins %}: {{ origins|join(', ') }}{% endif %})</label>
+        <input type="text" name="origin" placeholder="IST veya IST,SAW,ESB"></div>
+      <div><label>En erken gidiş</label><input type="date" name="date_from" value="{{ (today + timedelta(days=1)).isoformat() }}"></div>
+      <div><label>En geç gidiş</label><input type="date" name="date_to" value="{{ (today + timedelta(days=45)).isoformat() }}"></div>
+      <div><label>En az gün</label><input type="number" name="min_days" value="3" min="1" max="30"></div>
+      <div><label>En çok gün</label><input type="number" name="max_days" value="6" min="1" max="30"></div>
+      <div><label>Hedef (boş = her yer)</label><input type="text" name="destinations" placeholder="VIE, PRG"></div>
+      <div><label>Bütçe / hedef fiyat (toplam)</label><input type="number" name="budget" placeholder="opsiyonel"></div>
+      <div><label>Kara yolu en fazla (saat)</label><input type="number" name="max_ground_hours" value="6" step="0.5"></div>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" name="open_jaw" checked> Farklı şehirden dönüş öner</label>
+      <label><input type="checkbox" name="direct"> Sadece direkt</label>
+      <label><input type="checkbox" name="abroad"> Sadece yurt dışı</label>
+    </div>
+    <div class="row"><span class="mute">Havayolu (boş = hepsi):</span>
+      {% for code, name in airline_choices %}<label><input type="checkbox" name="airlines" value="{{ code }}"> {{ name }}</label>{% endfor %}
+    </div>
+    <div class="row">
+      <button>Ara</button>
+      <button class="ghost" formaction="/takip" title="Bütçe alanı hedef fiyat olur">Bunu takip et 🔔</button>
+      <label><input type="checkbox" name="rolling" value="60"> Takipte tarihleri kaydır (hep önümüzdeki 60 gün)</label>
+    </div>
+  </form>
+</div>
+
+<div class="card" id="takipler">
+  <h2>Takiplerim</h2>
+  {% if watches %}
+  <table>
+    <tr><th>#</th><th>Takip</th><th>Hedef</th><th>Son en iyi</th><th></th></tr>
+    {% for w in watches %}
+    <tr><td>{{ w.id }}</td><td>{{ w.name }}{% if not w.active %} <span class="mute">(kapalı)</span>{% endif %}</td>
+      <td>{{ money(w.threshold) if w.threshold else '–' }}</td><td>{{ money(w.last_best) if w.last_best else '–' }}</td>
+      <td><form method="post" action="/takip/{{ w.id }}/sil"><button class="small ghost">sil</button></form></td></tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="mute">Henüz takip yok. Formu doldurup "Bunu takip et"e bas; fiyat düşünce Telegram'dan haber gelir.</p>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Konum ve Telegram</h2>
+  <form method="post" action="/ev" id="ev">
+    <input type="hidden" name="lat"><input type="hidden" name="lon">
+    <div class="grid">
+      <div><label>Ev havalimanı (konum yoksa)</label><input type="text" name="home_code" value="{{ user.home_code or '' }}" placeholder="IST"></div>
+      <div><label>Yarıçap (km)</label><input type="number" name="radius" value="{{ user.home_radius_km|int }}"></div>
+    </div>
+    <div class="row">
+      <button>Kaydet</button>
+      <button type="button" class="ghost" onclick="geo()">📍 Konumumu kullan</button>
+      <span class="mute">{% if user.home_lat %}Konum kayıtlı ({{ '%.2f'|format(user.home_lat) }}, {{ '%.2f'|format(user.home_lon) }}){% else %}Konum yok{% endif %}</span>
+    </div>
+  </form>
+  <p class="mute">Telegram: botu aç ve <code>/start {{ user.tg_invite }}</code> yaz. {% if user.tg_chat_id %}✅ bağlı{% else %}(bağlı değil){% endif %}</p>
+</div>
+<script>
+function geo(){ if(!navigator.geolocation){alert('Tarayıcı konum desteklemiyor');return;}
+  navigator.geolocation.getCurrentPosition(p=>{const f=document.getElementById('ev');
+    f.lat.value=p.coords.latitude; f.lon.value=p.coords.longitude; f.submit();}, e=>alert('Konum alınamadı: '+e.message));}
+</script>
+{% endblock %}

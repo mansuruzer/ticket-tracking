@@ -1,0 +1,11 @@
+services:
+  ucuzgez:
+    build: .
+    env_file: .env
+    environment:
+      UG_DB_PATH: /data/ucuzgez.db
+    volumes:
+      - ./data:/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

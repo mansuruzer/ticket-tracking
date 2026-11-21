@@ -1,0 +1,10 @@
+.env
+*.db
+*.db-wal
+*.db-shm
+backups/
+/data/
+__pycache__/
+.venv/
+.pytest_cache/
+ucuzgez/data/airports_full.json

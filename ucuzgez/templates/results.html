@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block body %}
+<p><a href="/">← yeni arama</a></p>
+{% if error %}<div class="card err">{{ error }}</div>{% endif %}
+{% if res %}
+<div class="card">
+  <h2>{{ q.origins|map('city')|join(', ') }} çıkışlı · {{ day_str(q.date_from) }} – {{ day_str(q.date_to) }} · {{ q.min_days }}-{{ q.max_days }} gün</h2>
+  <p class="mute">{{ res.destinations_scanned }} şehir tarandı · {{ res.api_calls }} API çağrısı, {{ res.cache_hits }} önbellekten
+  {% if provider == 'travelpayouts' %}· Fiyatlar son ~48 saatte görülen önbellek fiyatları; satın almadan önce linkten kontrol et.{% endif %}
+  {% if provider == 'mock' %}· <b>DEMO VERİ</b> (UG_PROVIDER=mock){% endif %}</p>
+  {% for n in res.notes %}<p class="mute">{{ n }}</p>{% endfor %}
+  {% if not res.trips %}<p>Uygun gezi bulunamadı.</p>{% endif %}
+  {% for t in res.trips %}
+  <div class="trip">
+    <div class="head">
+      <span>{{ loop.index }}. {{ city(t.outbound.origin_city) }} → {{ city(t.dest_city) }}
+        {% if t.open_jaw %}⇢ {{ city(t.return_city) }}{% endif %} → {{ city(t.inbound.destination_city) }}
+        <span class="tag">{{ t.days }} gün</span>{% if t.open_jaw %}<span class="tag">farklı şehirden dönüş</span>{% endif %}
+        {% if t.verified %}<span class="tag">canlı ✓</span>{% endif %}</span>
+      <span class="price">{{ money(t.total) }}</span>
+    </div>
+    {% for leg, icon in [(t.outbound, '🛫'), (t.inbound, '🛬')] %}
+      {% if loop.index == 2 and t.ground %}
+      <div class="leg">🚌 {{ city(t.ground.from_city) }} → {{ city(t.ground.to_city) }} · ~{{ t.ground.hours }} sa · ~{{ money(t.ground_cost) }} <span class="mute">(tahmini otobüs/tren)</span></div>
+      {% endif %}
+      <div class="leg">{{ icon }} {{ day_str(leg.depart) }} {{ leg.depart_time or '' }} · {{ leg.origin }}→{{ leg.destination }} ·
+        {{ airline_name(leg.airline) }}{% if leg.flight_number %} {{ leg.flight_number }}{% endif %}
+        {% if leg.transfers %}· {{ leg.transfers }} aktarma{% endif %} · <b>{{ money(leg.price) }}</b>
+        <span class="mute">{% for name, url in leg_links(leg) %}<a href="{{ url }}" target="_blank" rel="noopener">{{ name }}</a>{% endfor %}</span>
+      </div>
+    {% endfor %}
+    {% if t.saving %}<div class="save">💡 {{ ablative(city(t.dest_city)) }} dönseydin {{ money(t.classic_total) }} → {{ money(t.saving) }} tasarruf</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
