@@ -38,6 +38,8 @@ class TripQuery:
     airlines: set[str] | None = None
     exclude_airlines: set[str] | None = None
     exclude_countries: set[str] | None = None
+    include_countries: set[str] | None = None    # bölge filtresi (örn. vizesiz ülkeler)
+    region: str | None = None                    # gösterim için bölge anahtarı
     top_destinations: int = 12
     limit: int = 10
     per_destination: int = 2
@@ -132,7 +134,7 @@ class Planner:
                     dc = city(f.destination_city)
                     if dc in home:
                         continue
-                    if q.exclude_countries and self.airports.country_of(dc) in q.exclude_countries:
+                    if not self._country_ok(dc, q):
                         continue
                     cur = best_out[dc].get(f.depart)
                     if cur is None or f.price < cur.price:
@@ -169,12 +171,12 @@ class Planner:
             if q.open_jaw:
                 near = []
                 for R, _km in self.airports.cities_near_city(D, max_km):
-                    if R in home:
-                        continue
+                    if R in home or not self._country_ok(R, q):
+                        continue   # dönüş şehri de seçilen bölgede olmalı (vize!)
                     g = self.ground.estimate(D, R)
                     if g and g.hours <= q.max_ground_hours:
                         near.append((R, g))
-                options += near[:6]
+                options += near[:10]
             ins_D = inbound(D)
             for R, g in options:
                 ins = ins_D if R == D else inbound(R)
@@ -207,6 +209,14 @@ class Planner:
             notes.append(f"Bütçe altında sonuç yok; bulunan en ucuz: {all_trips[0].total:.0f}")
         return PlanResult(chosen, self.search.api_calls - calls0, self.search.cache_hits - hits0,
                           len(candidates), notes)
+
+    def _country_ok(self, city: str, q: TripQuery) -> bool:
+        c = self.airports.country_of(city)
+        if q.exclude_countries and c in q.exclude_countries:
+            return False
+        if q.include_countries is not None and c not in q.include_countries:
+            return False
+        return True
 
     # ------------------------------------------------------------------
     @staticmethod

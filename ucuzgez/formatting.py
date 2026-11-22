@@ -59,30 +59,38 @@ def leg_links(f) -> list[tuple[str, str]]:
     return links
 
 
+def short_day(d: date) -> str:
+    return f"{d.day} {TR_MONTHS[d.month - 1]}"
+
+
+def trip_title(t: Trip, ap: AirportDB) -> str:
+    dest = ap.city_name(t.dest_city)
+    if t.open_jaw:
+        return f"{dest}, dönüş {ablative(ap.city_name(t.return_city))}"
+    return dest
+
+
 def trip_telegram(t: Trip, ap: AirportDB, cur: str, idx: int | None = None) -> str:
-    e = html.escape
+    """Telegram için sade, emojisiz özet."""
+    e = lambda x: html.escape(x, quote=False)   # noqa: E731
     o, i = t.outbound, t.inbound
     head = f"{idx}. " if idx is not None else ""
-    route = f"{ap.city_name(o.origin_city)} → {ap.city_name(o.destination_city)}"
-    if t.open_jaw:
-        route += f" ⇢ {ap.city_name(i.origin_city)} → {ap.city_name(i.destination_city)}"
-    else:
-        route += f" → {ap.city_name(i.destination_city)}"
-    lines = [f"<b>{head}{e(route)}</b> — <b>{money(t.total, cur)}</b> ({t.days} gün)"
-             + (" ✅canlı" if t.verified else "")]
-    lines.append(f"🛫 {day_str(o.depart)} {o.depart_time or ''} {o.origin}→{o.destination} "
-                 f"{e(airline_name(o.airline))} {money(o.price, cur)}"
-                 + (f" ({o.transfers} aktarma)" if o.transfers else ""))
+
+    def leg(label: str, f) -> str:
+        links = " ".join(f'<a href="{html.escape(u)}">{e(n)}</a>' for n, u in leg_links(f)[:2])
+        when = short_day(f.depart) + (f" {f.depart_time}" if f.depart_time else "")
+        extra = f", {f.transfers} aktarma" if f.transfers else ""
+        return (f"{label}: {when}, {f.origin}–{f.destination}, "
+                f"{e(airline_name(f.airline))}{extra}, {money(f.price, cur)}\n   {links}")
+
+    lines = [f"<b>{head}{e(trip_title(t, ap))}</b>",
+             f"<b>{money(t.total, cur)}</b> toplam, {t.days} gün ({day_str(o.depart)} – {day_str(i.depart)})"
+             + (", canlı fiyat" if t.verified else "")]
+    lines.append(leg("Gidiş", o))
     if t.ground:
-        lines.append(f"🚌 {ap.city_name(t.ground.from_city)}→{ap.city_name(t.ground.to_city)} "
-                     f"~{t.ground.hours:g} sa, ~{money(t.ground_cost, cur)} (tahmini)")
-    lines.append(f"🛬 {day_str(i.depart)} {i.depart_time or ''} {i.origin}→{i.destination} "
-                 f"{e(airline_name(i.airline))} {money(i.price, cur)}"
-                 + (f" ({i.transfers} aktarma)" if i.transfers else ""))
+        lines.append(f"Yol: {ap.city_name(t.ground.from_city)}–{ap.city_name(t.ground.to_city)} otobüs/tren, "
+                     f"yaklaşık {t.ground.hours:g} saat, ~{money(t.ground_cost, cur)} (tahmini)")
+    lines.append(leg("Dönüş", i))
     if t.saving:
-        lines.append(f"💡 {ablative(ap.city_name(t.dest_city))} dönseydin {money(t.classic_total, cur)} → "
-                     f"<b>{money(t.saving, cur)} tasarruf</b>")
-    links = " | ".join(f'<a href="{e(u)}">{e(n)}</a>' for n, u in leg_links(o)[:2])
-    links2 = " | ".join(f'<a href="{e(u)}">{e(n)}</a>' for n, u in leg_links(i)[:2])
-    lines.append(f"Gidiş: {links}\nDönüş: {links2}")
+        lines.append(f"{ablative(ap.city_name(t.dest_city))} dönmek {money(t.saving, cur)} daha pahalı olurdu.")
     return "\n".join(lines)

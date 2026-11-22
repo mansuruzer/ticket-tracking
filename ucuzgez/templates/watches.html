@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Takiplerim – UcuzGez{% endblock %}
+{% block style %}
+  .watch { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 24px; align-items: center;
+           padding: 16px 0; border-top: 1px solid var(--line); }
+  .watch:first-child { border-top: 0; }
+  .watch h2 { font-size: var(--step-0); margin: 0; }
+  .watch .stat { text-align: right; }
+  .watch .stat b { display: block; font-size: var(--step-1); }
+  .off { color: var(--mute); }
+  @media (max-width: 560px) { .watch { grid-template-columns: 1fr auto; } .watch form { grid-column: 1 / -1; } }
+{% endblock %}
+{% block body %}
+<h1>Takiplerim</h1>
+<p class="lede">Takip ettiğin aramaları birkaç saatte bir yeniden çalıştırırım. Fiyat hedefinin altına inerse ya da son 30 günün normalinden belirgin ucuzlarsa Telegram'dan haber veririm.</p>
+{% if added %}<p class="notice" role="status">Takip eklendi. İlk kontrol birkaç saat içinde yapılacak.</p>{% endif %}
+{% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+
+{% if items %}
+<div class="panel">
+  {% for w in items %}
+  <div class="watch">
+    <div>
+      <h2>{{ w.name }}</h2>
+      <p class="small muted" style="margin:0">
+        {% if not w.active %}Tarihi geçtiği için durduruldu.{% elif w.last_checked %}Son kontrol: {{ ts_str(w.last_checked) }}.{% else %}Henüz kontrol edilmedi.{% endif %}
+      </p>
+    </div>
+    <p class="stat num" style="margin:0">
+      <span class="small muted">Hedef</span>
+      <b>{{ money(w.threshold) if w.threshold else 'Yok' }}</b>
+    </p>
+    <p class="stat num" style="margin:0">
+      <span class="small muted">Son en ucuz</span>
+      <b class="{{ '' if w.last_best else 'off' }}">{{ money(w.last_best) if w.last_best else '—' }}</b>
+    </p>
+    <form method="post" action="/takipler/{{ w.id }}/sil" onsubmit="return confirm('Bu takip silinsin mi?')">
+      <button class="btn btn-quiet btn-small">Takibi sil</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="panel">
+  <p><strong>Henüz takibin yok.</strong></p>
+  <p class="muted">Bir arama yap, sonuçların altındaki "Bu aramayı takip et" bölümünden hedef fiyatını gir.</p>
+  <a class="btn" href="/">Gezi ara</a>
+</div>
+{% endif %}
+{% endblock %}

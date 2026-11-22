@@ -41,26 +41,45 @@ def test_rolling_params_roundtrip(svc):
     assert q2.date_from == q.date_from and q2.airlines == {"PC", "VF"}
 
 
+def text_of(r):
+    return r[0] if isinstance(r, tuple) else r
+
+
 def test_telegram_flow(svc, bot):
     u = svc.db.add_user("Ali")
     assert "davet" in bot.handle(msg("/ara IST")).lower()
     assert "bağlandı" in bot.handle(msg(f"/start {u['tg_invite']}"))
     # konum paylaşımı -> İstanbul
     r = bot.handle(msg(location={"latitude": 41.0, "longitude": 29.0}))
-    assert "İstanbul" in r
+    assert "İstanbul" in text_of(r)
     assert svc.home_origins(svc.db.user(u["id"])) == ["IST"]
-    # arama
+    # /kesfet bölgesiz -> düğmeler
+    r = bot.handle(msg("/kesfet 3-5"))
+    assert isinstance(r, tuple) and "inline_keyboard" in r[1]
+    datas = [b["callback_data"] for row in r[1]["inline_keyboard"] for b in row]
+    assert "k:vizesiz:3-5" in datas
+    # düğmeye basılması -> arama sonucu + takip düğmesi
+    out = bot.handle_callback(42, "k:vizesiz:3-5")
+    assert isinstance(out, tuple) and "₺" in out[0] and "1." in out[0]
+    assert "Bu aramayı takip et" in str(out[1])
+    # sonucu tek dokunuşla takibe al
+    t = bot.handle_callback(42, "t:last")
+    assert "Takip #1" in t and "Vizesiz" in t
+    # bölgeli metin araması
     d = (date.today() + timedelta(days=10)).strftime("%d.%m.%Y")
     d2 = (date.today() + timedelta(days=30)).strftime("%d.%m.%Y")
-    out = bot.handle(msg(f"/kesfet {d} {d2} 3-5"))
-    assert "₺" in out and "1." in out
-    # takip
+    out = text_of(bot.handle(msg(f"/ara IST {d} {d2} 3-5 schengen")))
+    assert "₺" in out
     r = bot.handle(msg("/takip IST 3-5 999999"))
-    assert "Takip #" in r
+    assert "Takip #2" in r
     assert "#1" in bot.handle(msg("/takipler"))
-    assert bot.handle(msg("/sil 1")) == "Silindi."
+    assert bot.handle(msg("/sil 1")) == "Takip silindi."
     with pytest.raises(ValueError):
         bot.handle(msg("/ara IST ???"))
+    # hiçbir yanıtta emoji olmasın
+    import re
+    for out in bot.sent:
+        assert not re.search("[\U0001F300-\U0001FAFF\u2600-\u27BF]", out[1])
 
 
 def test_watch_notifies_once(svc):
@@ -70,7 +89,7 @@ def test_watch_notifies_once(svc):
     wid = svc.db.add_watch(u["id"], "test", svc.query_to_params(q), threshold=10_000_000)
     w = svc.db.one("SELECT * FROM watches WHERE id=?", (wid,))
     first = svc.check_watch(w)
-    assert first and "hedefin" in first
+    assert first and "hedefin" in first and "Fiyat düştü" in first
     w = svc.db.one("SELECT * FROM watches WHERE id=?", (wid,))
     assert svc.check_watch(w) is None             # aynı fiyat -> tekrar bildirme
     assert svc.db.watch_median(wid)[1] == 2
@@ -106,7 +125,7 @@ def test_scheduler_tick_runs_watch_and_radar(svc):
     sent = []
     sch = Scheduler(svc, lambda user, text: sent.append(text))
     sch.tick(now=datetime.now().replace(hour=23))
-    assert any("Takip #" in s for s in sent)
+    assert any("Fiyat düştü" in s for s in sent)
     assert svc.db.kv_get("radar_day") == date.today().isoformat()
 
 

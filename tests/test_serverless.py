@@ -91,7 +91,7 @@ def test_services_on_turso(monkeypatch, tmp_path):
     q = TripQuery(["IST"], date.today() + timedelta(days=10), date.today() + timedelta(days=20), 3, 4)
     wid = svc.db.add_watch(u["id"], "w", svc.query_to_params(q), 10_000_000)
     msg = svc.check_watch(svc.db.one("SELECT * FROM watches WHERE id=?", (wid,)))
-    assert msg and "Takip" in msg
+    assert msg and "Fiyat düştü" in msg
     assert svc.db.kv_get("yok") is None
     svc.db.kv_set("k", {"a": 1})
     assert svc.db.kv_get("k") == {"a": 1}

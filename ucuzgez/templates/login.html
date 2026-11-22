@@ -1,12 +1,16 @@
 {% extends "base.html" %}
+{% block title %}Giriş yap – UcuzGez{% endblock %}
 {% block body %}
-<div class="card" style="max-width:420px;margin:40px auto">
-  <h2>Giriş</h2>
-  <p class="mute">Yöneticinin verdiği kişisel giriş linkini aç ya da kodu buraya yapıştır.</p>
-  {% if error %}<p class="err">{{ error }}</p>{% endif %}
-  <form method="post" action="/giris">
-    <input type="text" name="token" placeholder="giriş kodu" autofocus>
-    <div class="row"><button>Giriş</button></div>
+<div style="max-width:440px;margin:8vh auto 0">
+  <h1>Ucuz geziler, esnek tarihler</h1>
+  <p class="lede">UcuzGez davetle çalışır. Sana gönderilen giriş linkini aç ya da linkteki kodu buraya yapıştır.</p>
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/giris" class="panel">
+    <div class="field">
+      <label for="token">Giriş kodu</label>
+      <input class="input" id="token" name="token" autocomplete="off" required autofocus>
+    </div>
+    <p style="margin:16px 0 0"><button class="btn">Giriş yap</button></p>
   </form>
 </div>
 {% endblock %}

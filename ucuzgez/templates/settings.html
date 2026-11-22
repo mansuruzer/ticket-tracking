@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Ayarlar – UcuzGez{% endblock %}
+{% block style %}
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 24px; }
+  section + section { margin-top: 20px; }
+  code { background: var(--soft); padding: 2px 6px; border-radius: 4px; font-size: .95em; }
+{% endblock %}
+{% block body %}
+<h1>Ayarlar</h1>
+{% if saved %}<p class="notice" role="status">Ayarlar kaydedildi.</p>{% endif %}
+
+<section class="panel">
+  <h2>Nereden uçuyorsun?</h2>
+  <p class="muted">Kalkış alanını boş bıraktığında bu bilgiye göre ararım.</p>
+  {% if near %}
+  <p>Konumuna yakın havalimanları: <strong>{% for c, km in near %}{{ c|city }} ({{ km|round|int }} km){% if not loop.last %}, {% endif %}{% endfor %}</strong></p>
+  {% elif user.home_lat %}
+  <p class="notice notice-error">Kayıtlı konumunun {{ user.home_radius_km|int }} km yakınında havalimanı yok. Yarıçapı artır.</p>
+  {% endif %}
+  <form method="post" action="/ayarlar" id="home">
+    <input type="hidden" name="lat"><input type="hidden" name="lon">
+    <div class="grid2">
+      <div class="field">
+        <label for="home_code">Ev havalimanı (konum yoksa kullanılır)</label>
+        <input class="input" id="home_code" name="home_code" value="{{ user.home_code or '' }}" placeholder="IST">
+      </div>
+      <div class="field">
+        <label for="radius">Konumdan en fazla uzaklık (km)</label>
+        <input class="input num" type="number" min="20" max="1000" id="radius" name="radius" value="{{ user.home_radius_km|int }}">
+      </div>
+    </div>
+    <p class="actions" style="display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 0">
+      <button class="btn">Kaydet</button>
+      <button type="button" class="btn btn-quiet" id="geo">Konumumu kullan</button>
+      {% if user.home_lat %}<button class="btn btn-quiet" name="clear_location" value="1">Konumu sil</button>{% endif %}
+    </p>
+    <p class="small muted" id="geo-msg" role="status"></p>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Telegram</h2>
+  {% if user.tg_chat_id %}
+  <p>Telegram hesabın bağlı. Fiyat bildirimleri oraya gelir.</p>
+  {% else %}
+  <p>Bildirim almak için bota şunu yaz: <code>/start {{ user.tg_invite }}</code></p>
+  {% endif %}
+  <p class="small muted">Botta kullanabileceğin komutların listesi için <code>/yardim</code> yaz.</p>
+</section>
+{% endblock %}
+{% block script %}
+<script>
+document.getElementById('geo').addEventListener('click', function () {
+  var msg = document.getElementById('geo-msg');
+  if (!navigator.geolocation) { msg.textContent = 'Tarayıcın konum paylaşmayı desteklemiyor.'; return; }
+  msg.textContent = 'Konum alınıyor…';
+  navigator.geolocation.getCurrentPosition(function (p) {
+    var f = document.getElementById('home');
+    f.lat.value = p.coords.latitude; f.lon.value = p.coords.longitude; f.submit();
+  }, function (e) { msg.textContent = 'Konum alınamadı: tarayıcıda konum iznini aç ve tekrar dene.'; });
+});
+</script>
+{% endblock %}

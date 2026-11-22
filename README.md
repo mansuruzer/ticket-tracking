@@ -7,6 +7,7 @@ En fazla 50 kişilik kapalı bir grup için yazılmış, ticari olmayan bir ara�
 - **Farklı şehirden dönüş önerir (açık çene):** Viyana'ya uçup Prag'dan dönmek daha ucuzsa bunu, otobüs/tren süresi ve ücret tahminiyle birlikte gösterir. Aynı tarihlerde Viyana'dan dönmenin ne kadar tutacağını ve aradaki farkı da yazar.
 - **Takip + bildirim:** Bir arama kaydedilir, sistem birkaç saatte bir yeniden kontrol eder. Fiyat hedefinin altına inerse ya da son 30 günün normalinden belirgin ucuzlarsa **Telegram'dan** haber verir.
 - **Fırsat radarı:** Her sabah evinden her yere tek yön fiyatlara bakar. Rotanın normalinden %35+ ucuz olan bir uçuş varsa haber verir.
+- **Ülke grupları:** Her yer, yurt dışı, vizesiz ülkeler (bordo pasaport, Dışişleri Kasım 2026 listesi), vizesiz + kapıda/e-vize, Schengen, Balkanlar, Kafkasya, Orta Doğu, Avrupa, yurt içi. Farklı şehirden dönüş önerileri de aynı grubun içinde kalır; örneğin vizesiz aramada Schengen'den dönüş önerilmez. Liste: `ucuzgez/regions.py`.
 - **Pegasus, AJet ve diğerleri:** Veri kaynağında görünen bütün havayolları gelir. İstersen havayoluna göre süzebilirsin.
 
 Cronjob gerekmez. Zamanlayıcı uygulamanın içinde çalışır: **tek süreç = web + Telegram botu + zamanlayıcı + SQLite.**
@@ -54,7 +55,8 @@ pytest -q
 ```
 /start KOD                           hesabı bağla (davet kodu)
 /konum                               konum paylaş → yakın havalimanlarından arar
-/kesfet 3-5                          konumundan önümüzdeki 60 gün, 3-5 günlük en ucuz geziler
+/kesfet 3-5                          bölge düğmeleri çıkar; seçince konumundan 60 günlük tarama
+/ara IST 3-6 vizesiz 4000             bölge adıyla arama (/bolgeler listeler)
 /ara IST 01.12 20.12 3-5             tarih aralığı + gün aralığı
 /ara IST 01.12 31.12 3-7 VIE PRG     sadece bu hedefler
 /ara SAW 01.12 20.12 2-4 direkt pegasus ajet yurtdisi

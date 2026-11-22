@@ -177,3 +177,23 @@ def test_travelpayouts_parse():
     assert (f.origin, f.origin_city, f.destination_city) == ("SAW", "IST", "VIE")
     assert f.price == 1899 and f.airline == "PC" and f.depart == date(2026, 12, 5) and f.depart_time == "07:15"
     assert f.link.startswith("https://www.aviasales.com/search/")
+
+
+# ---------------------------------------------------------------- bölgeler
+def test_region_parse_and_filter():
+    from ucuzgez.regions import find_region
+    assert find_region("Schengen").key == "schengen" and find_region("vizesiz").key == "vizesiz"
+    assert find_region("HER") is None          # Kandiye havalimanı kodu, bölge değil
+    ps = parse_search("IST 3-5 vizesiz".split())
+    assert ps.query.include_countries and "RS" in ps.query.include_countries and "ME" not in ps.query.include_countries
+    assert "AT" not in ps.query.include_countries
+    # Belgrad'a git; Budapeşte'den dönüş ucuz ama Schengen (vize!) -> vizesiz aramada önerilmemeli
+    d1, d2 = D0, D0 + timedelta(days=4)
+    fares = [F("IST", "BEG", d1, 800), F("BEG", "IST", d2, 3000), F("BUD", "IST", d2, 500), F("IST", "VIE", d1, 300),
+             F("VIE", "IST", d2, 300)]
+    p, _ = make_planner(fares)
+    q = TripQuery(["IST"], d1, d1, 3, 5, include_countries=set(ps.query.include_countries))
+    trips = p.plan(q).trips
+    assert trips and all(t.dest_city == "BEG" and t.return_city == "BEG" for t in trips)
+    q2 = TripQuery(["IST"], d1, d1, 3, 5)
+    assert p.plan(q2).trips[0].dest_city == "VIE"

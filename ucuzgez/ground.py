@@ -44,7 +44,8 @@ OVERRIDES: dict[frozenset, tuple[float, float]] = {
 
 
 # Kara bağlantısı olmayan / pratikte geçilmeyen ülkeler (farklı ülkeye otobüsle gidilemez sayılır)
-NO_LAND_LINK = {"CY", "GB", "IE", "IL", "AE", "IS", "MT", "AZ"}
+NO_LAND_LINK = {"CY", "XN", "GB", "IE", "IL", "AE", "IS", "MT", "AZ", "JP", "KR", "TW", "SG", "HK", "MO",
+                "PH", "ID", "MV", "LK", "MU", "SC", "SA", "QA", "BH", "KW", "OM", "IR", "IQ", "LB", "JO", "EG"}
 
 
 @dataclass(frozen=True)
@@ -82,8 +83,8 @@ class GroundEstimator:
         ca, cb = self.airports.country_of(a), self.airports.country_of(b)
         if ca != cb and (ca in NO_LAND_LINK or cb in NO_LAND_LINK):
             return None   # deniz/kapalı sınır: kara yoluyla gidilemez say
-        if ca == "CY" or cb == "CY":
-            return None   # Kıbrıs içi (Ercan-Larnaka) sınır geçişi; otomatik önerme
+        if ca != cb and (ca is None or cb is None):
+            return None   # ülkesi bilinmeyen şehir: önerme
         road = km * self.road_factor
         hours = road / self.avg_kmh + 0.5
         eur = self.base_eur + road * self.eur_per_km

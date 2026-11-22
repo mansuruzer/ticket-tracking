@@ -64,10 +64,10 @@ def ensure_setup() -> list[str]:
     try:
         if bot and settings.tg_webhook_secret and base.startswith("https://"):
             url = f"{base}/tg/webhook"
-            if svc.db.kv_get("tg_webhook_url") != url:
+            if svc.db.kv_get("tg_webhook_v2") != url:
                 r = bot.set_webhook(url, settings.tg_webhook_secret)
                 if r.get("ok"):
-                    svc.db.kv_set("tg_webhook_url", url)
+                    svc.db.kv_set("tg_webhook_v2", url)
                     done.append("webhook")
                 else:
                     ok = False
@@ -90,9 +90,9 @@ def ensure_setup() -> list[str]:
             done.append("admin")
             if bot:
                 bot.send(int(ADMIN_CHAT_ID),
-                         "✅ <b>UcuzGez kuruldu!</b>\n\n"
-                         f"🌐 Web girişin: {base}/giris?t={u['token']}\n"
-                         "🏠 Ev havalimanın IST olarak ayarlandı (/konum ile değiştir).\n\n"
+                         "<b>UcuzGez kuruldu.</b>\n\n"
+                         f"Web girişin: {base}/giris?t={u['token']}\n"
+                         "Ev havalimanın İstanbul olarak ayarlandı, /konum ile değiştirebilirsin.\n\n"
                          "Dene: /kesfet 3-5\nYardım: /yardim")
     except Exception:
         ok = False
@@ -142,7 +142,7 @@ async def tg_setup(request: Request):
     base = settings.base_url.rstrip("/")
     r = bot.set_webhook(f"{base}/tg/webhook", settings.tg_webhook_secret)
     if r.get("ok"):
-        svc.db.kv_set("tg_webhook_url", f"{base}/tg/webhook")
+        svc.db.kv_set("tg_webhook_v2", f"{base}/tg/webhook")
     return JSONResponse(r)
 
 

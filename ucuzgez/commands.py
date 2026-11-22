@@ -6,27 +6,29 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from .planner import TripQuery
+from .regions import REGIONS, Region, find_region
 
 AIRLINE_WORDS = {"pegasus": "PC", "ajet": "VF", "anadolujet": "VF", "thy": "TK", "wizz": "W6",
                  "ryanair": "FR", "easyjet": "U2", "sunexpress": "XQ"}
 
-HELP = """<b>UcuzGez komutları</b>
+HELP = """<b>Komutlar</b>
 
-<b>/ara</b> [kalkış] [tarih1] [tarih2] [gün] [bütçe] [hedef...] [seçenekler]
+<b>/kesfet</b> konumundan önümüzdeki 60 günde en ucuz geziler. Bölgeyi düğmeyle seçersin.
+  /kesfet 3-5   (3 ile 5 gün arası)
+
+<b>/ara</b> kalkış, tarihler, gün, bütçe, bölge ya da şehirler
   /ara IST 01.12 20.12 3-5
-  /ara konum 05.12.2026 15.12.2026 4 3000
-  /ara IST 01.12 31.12 3-7 VIE PRG BUD
-  /ara SAW 01.12 20.12 2-4 direkt pegasus ajet
-  Tarih vermezsen: yarından itibaren 60 gün. Gün: "4" ya da "3-6".
-  Seçenekler: direkt · aynisehir (farklı şehirden dönüş önerme) · yurtdisi · pegasus/ajet/thy...
+  /ara IST 3-6 vizesiz 4000
+  /ara SAW 01.12 31.12 2-4 VIE PRG direkt pegasus
+  Tarih yazmazsan yarından itibaren 60 gün. Bölgeler için /bolgeler.
 
-<b>/kesfet</b> [gün] — konumundan önümüzdeki 60 günde en ucuz geziler (örn /kesfet 3-5)
-<b>/takip</b> … — /ara ile aynı + bütçe = hedef fiyat. Sistem düzenli kontrol eder, düşünce yazar.
-  /takip IST 3-5 4000   (tarihsiz = sürekli önümüzdeki 60 gün)
-<b>/takipler</b> · <b>/sil</b> 3
-<b>/konum</b> — konumunu paylaş (yakın havalimanlarından arar) · <b>/ev</b> IST · <b>/yaricap</b> 200
-<b>/radar</b> — fırsat radarını şimdi çalıştır (normalde her sabah otomatik)
-<b>/davet</b> İsim · <b>/kullanicilar</b> — (yönetici) arkadaş davet et / kullanıcıları gör
+<b>/takip</b> /ara ile aynı, sondaki sayı hedef fiyat. Düzenli bakarım, düşünce yazarım.
+  /takip IST 3-5 schengen 6000
+<b>/takipler</b> takiplerini gör, <b>/sil</b> 3 sil
+
+<b>/konum</b> konumunu paylaş, <b>/ev</b> IST ev havalimanı, <b>/yaricap</b> 200 arama yarıçapı
+<b>/radar</b> normalinden çok ucuz uçuşlara şimdi bak (her sabah kendiliğinden çalışır)
+<b>/davet</b> İsim, <b>/kullanicilar</b> (sadece yönetici)
 """
 
 _DATE_RES = [
@@ -70,7 +72,7 @@ def parse_search(args: list[str], default_days: tuple[int, int] = (3, 7),
     budget = None
     max_transfers, open_jaw = 1, True
     airlines: set[str] = set()
-    excl_countries: set[str] = set()
+    region: Region | None = None
     origin_text = None
 
     for raw in args:
@@ -96,8 +98,8 @@ def parse_search(args: list[str], default_days: tuple[int, int] = (3, 7),
             max_transfers = 0
         elif low in ("aynisehir", "aynışehir", "kapali"):
             open_jaw = False
-        elif low in ("yurtdisi", "yurtdışı"):
-            excl_countries.add("TR")
+        elif len(tok) > 3 and find_region(tok):
+            region = find_region(tok)
         elif low in AIRLINE_WORDS:
             airlines.add(AIRLINE_WORDS[low])
         elif low in ("konum", "ev") and origin_text is None:
@@ -124,5 +126,7 @@ def parse_search(args: list[str], default_days: tuple[int, int] = (3, 7),
     q = TripQuery(origins=["?"], date_from=d1, date_to=d2, min_days=mn, max_days=mx,
                   destinations=destinations, budget=budget, open_jaw=open_jaw,
                   max_transfers=max_transfers, airlines=airlines or None,
-                  exclude_countries=excl_countries or None)
+                  include_countries=set(region.include) if region and region.include is not None else None,
+                  exclude_countries=set(region.exclude) if region and region.exclude else None,
+                  region=region.key if region else None)
     return ParsedSearch(origin_text, q, rolling, budget)

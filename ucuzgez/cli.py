@@ -70,17 +70,25 @@ def main(argv: list[str] | None = None) -> int:
 def update_airports() -> int:
     import requests
     from .geo import FULL_FILE
-    base = "https://api.travelpayouts.com/data/en"
+    base = "https://api.travelpayouts.com/data"
     print("İndiriliyor…")
-    airports = requests.get(f"{base}/airports.json", timeout=60).json()
-    cities = {c["code"]: c for c in requests.get(f"{base}/cities.json", timeout=60).json()}
+    airports = requests.get(f"{base}/en/airports.json", timeout=60).json()
+    try:   # Türkçe şehir adları varsa onları kullan
+        cities_list = requests.get(f"{base}/tr/cities.json", timeout=60).json()
+        assert isinstance(cities_list, list) and cities_list
+    except Exception:
+        cities_list = requests.get(f"{base}/en/cities.json", timeout=60).json()
+    cities = {c["code"]: c for c in cities_list}
     rows = []
     for a in airports:
         if a.get("iata_type") != "airport" or not a.get("flightable") or not a.get("coordinates"):
             continue
         city = cities.get(a.get("city_code") or "", {})
         name = (city.get("name_translations") or {}).get("tr") or city.get("name") or a.get("name")
-        rows.append([a["code"], a.get("city_code") or a["code"], name, a.get("country_code"),
+        country = a.get("country_code")
+        if a["code"] == "ECN":
+            country = "XN"   # KKTC
+        rows.append([a["code"], a.get("city_code") or a["code"], name, country,
                      a["coordinates"]["lat"], a["coordinates"]["lon"]])
     FULL_FILE.write_text(json.dumps({"airports": rows}, ensure_ascii=False), encoding="utf-8")
     print(f"{len(rows)} havalimanı kaydedildi -> {FULL_FILE}")

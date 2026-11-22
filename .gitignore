@@ -7,4 +7,3 @@ backups/
 __pycache__/
 .venv/
 .pytest_cache/
-ucuzgez/data/airports_full.json

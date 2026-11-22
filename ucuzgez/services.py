@@ -55,8 +55,8 @@ class Services:
     @staticmethod
     def query_to_params(q: TripQuery, rolling_days: int | None = None) -> dict:
         d = asdict(q)
-        for k in ("airlines", "exclude_airlines", "exclude_countries"):
-            d[k] = sorted(d[k]) if d[k] else None
+        for k in ("airlines", "exclude_airlines", "exclude_countries", "include_countries"):
+            d[k] = sorted(d[k]) if d[k] is not None else None
         if rolling_days:
             d["rolling"] = {"start": max(1, (q.date_from - date.today()).days), "days": rolling_days}
         d["date_from"], d["date_to"] = q.date_from.isoformat(), q.date_to.isoformat()
@@ -74,8 +74,8 @@ class Services:
             today = date.today() + timedelta(days=1)
             if p["date_from"] < today:
                 p["date_from"] = today
-        for k in ("airlines", "exclude_airlines", "exclude_countries"):
-            p[k] = set(p[k]) if p.get(k) else None
+        for k in ("airlines", "exclude_airlines", "exclude_countries", "include_countries"):
+            p[k] = set(p[k]) if p.get(k) is not None else None
         return TripQuery(**p)
 
     # ---- arama -----------------------------------------------------------------
@@ -85,11 +85,14 @@ class Services:
 
     def format_result(self, res: PlanResult, n: int = 5) -> str:
         if not res.trips:
-            return "😕 Uygun gezi bulunamadı. " + " ".join(res.notes)
+            return ("Bu ölçütlere uyan gezi çıkmadı. Tarihleri genişletmeyi, gün sayısını esnetmeyi "
+                    "ya da başka bölge seçmeyi dene. " + " ".join(res.notes)).strip()
         parts = [trip_telegram(t, self.airports, self.s.currency, i) for i, t in enumerate(res.trips[:n], 1)]
-        foot = f"\n<i>{res.destinations_scanned} şehir tarandı · {res.api_calls} API çağrısı"
+        foot = f"\n<i>{res.destinations_scanned} şehir tarandı."
         if self.s.provider == "travelpayouts":
-            foot += " · fiyatlar son 48 saatin önbelleği, almadan önce kontrol et"
+            foot += " Fiyatlar son 48 saatte görülen fiyatlar, almadan önce linkten kontrol et."
+        if self.s.provider == "mock":
+            foot += " Şu an deneme verisi, fiyatlar gerçek değil."
         foot += "</i>"
         if res.notes:
             foot += "\n" + " ".join(res.notes)
@@ -104,7 +107,7 @@ class Services:
             if q.date_to < date.today():
                 with self.db.tx() as c:
                     c.execute("UPDATE watches SET active=0 WHERE id=?", (w["id"],))
-                return f"⌛ Takip #{w['id']} ({w['name']}) tarihi geçtiği için kapatıldı."
+                return f"Takip #{w['id']} ({w['name']}) tarihi geçtiği için durduruldu."
             res = self.plan(q)
         except Exception as e:  # tek takip hatası diğerlerini durdurmasın
             log.exception("takip %s hata", w["id"])
@@ -120,14 +123,14 @@ class Services:
         if w["threshold"] and best.total <= w["threshold"]:
             reasons.append(f"hedefin ({money(w['threshold'], self.s.currency)}) altında")
         if median and n >= 3 and best.total <= median * 0.85:
-            reasons.append(f"son 30 gün medyanından %{(1 - best.total / median) * 100:.0f} ucuz")
+            reasons.append(f"son 30 günün normalinden %{(1 - best.total / median) * 100:.0f} ucuz")
         if not reasons:
             return None
         last = self.db.last_notified(w["user_id"], "watch", str(w["id"]), 7 * 86400)
         if last and best.total >= last["price"] * 0.97:
             return None     # zaten haber verdik, belirgin yeni düşüş yok
         self.db.mark_notified(w["user_id"], "watch", str(w["id"]), best.total)
-        return (f"🔔 <b>Takip #{w['id']}: {w['name']}</b> — " + ", ".join(reasons) + "\n\n"
+        return (f"<b>Fiyat düştü: takip #{w['id']}</b>\n{w['name']}\nEn ucuz gezi " + " ve ".join(reasons) + ".\n\n"
                 + self.format_result(PlanResult(res.trips[:3], res.api_calls, res.cache_hits,
                                                 res.destinations_scanned, []), 3))
 
@@ -166,13 +169,13 @@ class Services:
         if not deals:
             return None
         deals.sort(key=lambda x: x[0])
-        lines = ["🎯 <b>Fırsat radarı</b> — normalinden çok ucuz tek yönler:"]
+        lines = ["<b>Fırsat radarı</b>: normalinden çok ucuz tek yön uçuşlar"]
         for ratio, route, f, med in deals[:max_deals]:
             self.db.mark_notified(user["id"], "radar", f"{route}@{f.depart}", f.price)
             lines.append(
-                f"• {self.airports.city_name(f.origin_city)} → {self.airports.city_name(f.destination_city)} "
+                f"- {self.airports.city_name(f.origin_city)} → {self.airports.city_name(f.destination_city)} "
                 f"{day_str(f.depart)} {airline_name(f.airline)} <b>{money(f.price, self.s.currency)}</b> "
                 f"(normali ~{money(med, self.s.currency)}, %{(1 - ratio) * 100:.0f} ucuz) "
                 f"<a href=\"{f.link or google_flights_link(f.origin, f.destination, f.depart)}\">bak</a>")
-        lines.append("İstersen /ara ile bu şehre dönüşlü gezi planlat.")
+        lines.append("Dönüşüyle birlikte planlamak için /ara ile o şehri ara.")
         return "\n".join(lines)
