@@ -57,7 +57,7 @@ class Services:
     @staticmethod
     def query_to_params(q: TripQuery, rolling_days: int | None = None) -> dict:
         d = asdict(q)
-        for k in ("airlines", "exclude_airlines", "exclude_countries", "include_countries"):
+        for k in ("airlines", "exclude_airlines", "exclude_countries", "include_countries", "include_cities", "exclude_cities"):
             d[k] = sorted(d[k]) if d[k] is not None else None
         if rolling_days:
             d["rolling"] = {"start": max(1, (q.date_from - date.today()).days), "days": rolling_days}
@@ -67,6 +67,7 @@ class Services:
     @staticmethod
     def params_to_query(p: dict) -> TripQuery:
         p = dict(p)
+        p.pop("_targets", None)
         roll = p.pop("rolling", None)
         if roll:
             start = date.today() + timedelta(days=roll["start"])
@@ -76,7 +77,7 @@ class Services:
             today = date.today() + timedelta(days=1)
             if p["date_from"] < today:
                 p["date_from"] = today
-        for k in ("airlines", "exclude_airlines", "exclude_countries", "include_countries"):
+        for k in ("airlines", "exclude_airlines", "exclude_countries", "include_countries", "include_cities", "exclude_cities"):
             p[k] = set(p[k]) if p.get(k) is not None else None
         return TripQuery(**p)
 

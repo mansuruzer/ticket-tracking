@@ -1,50 +1,58 @@
 {% extends "base.html" %}
 {% block title %}Takiplerim – UcuzGez{% endblock %}
 {% block style %}
-  .watch { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 24px; align-items: center;
-           padding: 16px 0; border-top: 1px solid var(--line); }
-  .watch:first-child { border-top: 0; }
-  .watch h2 { font-size: var(--step-0); margin: 0; }
-  .watch .stat { text-align: right; }
-  .watch .stat b { display: block; font-size: var(--step-1); }
-  .off { color: var(--mute); }
-  @media (max-width: 560px) { .watch { grid-template-columns: 1fr auto; } .watch form { grid-column: 1 / -1; } }
+  .page { max-width: 760px; margin: 0 auto; padding-top: var(--s3); display: grid; gap: var(--s3); }
+  .page-head h1 { font-size: var(--t-2xl); }
+  .page-head p { margin-top: var(--s1); color: var(--sub); max-width: 60ch; }
+  .list { padding: var(--s1) var(--s3); }
+  .watch { display: grid; grid-template-columns: 1fr 89px 89px auto; gap: var(--s2) var(--s3); align-items: center; padding: var(--s3) 0; border-bottom: 1px solid var(--border); }
+  .watch:last-child { border-bottom: 0; }
+  .watch h2 { font-size: var(--t-md); letter-spacing: -0.01em; font-weight: 700; line-height: 1.4; }
+  .watch .when { font-size: var(--t-xs); color: var(--muted); margin-top: 2px; }
+  .stat { text-align: right; }
+  .stat span { display: block; font-size: var(--t-xs); color: var(--muted); }
+  .stat b { font-size: var(--t-md); font-weight: 700; }
+  .paused { display: inline-block; margin-left: var(--s1); padding: 1px 8px; border-radius: var(--r-pill); background: var(--input); color: var(--sub); font-size: var(--t-xs); font-weight: 600; }
+  .empty { padding: var(--s5) var(--s4); text-align: center; display: grid; gap: var(--s2); justify-items: center; }
+  .empty p { color: var(--sub); max-width: 46ch; }
+  @media (max-width: 620px) {
+    .watch { grid-template-columns: 1fr 1fr; }
+    .watch > div:first-child { grid-column: 1 / -1; }
+    .stat { text-align: left; }
+    .watch form { grid-column: 1 / -1; }
+  }
 {% endblock %}
 {% block body %}
-<h1>Takiplerim</h1>
-<p class="lede">Takip ettiğin aramaları birkaç saatte bir yeniden çalıştırırım. Fiyat hedefinin altına inerse ya da son 30 günün normalinden belirgin ucuzlarsa Telegram'dan haber veririm.</p>
-{% if added %}<p class="notice" role="status">Takip eklendi. İlk kontrol birkaç saat içinde yapılacak.</p>{% endif %}
-{% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
-
-{% if items %}
-<div class="panel">
-  {% for w in items %}
-  <div class="watch">
-    <div>
-      <h2>{{ w.name }}</h2>
-      <p class="small muted" style="margin:0">
-        {% if not w.active %}Tarihi geçtiği için durduruldu.{% elif w.last_checked %}Son kontrol: {{ ts_str(w.last_checked) }}.{% else %}Henüz kontrol edilmedi.{% endif %}
-      </p>
-    </div>
-    <p class="stat num" style="margin:0">
-      <span class="small muted">Hedef</span>
-      <b>{{ money(w.threshold) if w.threshold else 'Yok' }}</b>
-    </p>
-    <p class="stat num" style="margin:0">
-      <span class="small muted">Son en ucuz</span>
-      <b class="{{ '' if w.last_best else 'off' }}">{{ money(w.last_best) if w.last_best else '—' }}</b>
-    </p>
-    <form method="post" action="/takipler/{{ w.id }}/sil" onsubmit="return confirm('Bu takip silinsin mi?')">
-      <button class="btn btn-quiet btn-small">Takibi sil</button>
-    </form>
+<div class="page">
+  <div class="page-head">
+    <h1>Takiplerim</h1>
+    <p>Takip ettiğin aramaları birkaç saatte bir yeniden çalıştırırım. Fiyat hedefinin altına inerse ya da son 30 günün normalinden belirgin ucuzlarsa Telegram'dan haber veririm.</p>
   </div>
-  {% endfor %}
+  {% if added %}<p class="notice" role="status">Takip eklendi. İlk kontrol birkaç saat içinde yapılacak.</p>{% endif %}
+  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+
+  {% if items %}
+  <div class="card list">
+    {% for w in items %}
+    <div class="watch">
+      <div>
+        <h2>{{ w.name }}{% if not w.active %}<span class="paused">durduruldu</span>{% endif %}</h2>
+        <p class="when">{% if not w.active %}Tarih aralığı geçtiği için artık kontrol edilmiyor.{% elif w.last_checked %}Son kontrol {{ ts_str(w.last_checked) }}{% else %}Henüz kontrol edilmedi{% endif %}</p>
+      </div>
+      <p class="stat num"><span>Hedef</span><b>{{ money(w.threshold) if w.threshold else 'Yok' }}</b></p>
+      <p class="stat num"><span>Son en ucuz</span><b>{{ money(w.last_best) if w.last_best else '–' }}</b></p>
+      <form method="post" action="/takipler/{{ w.id }}/sil" onsubmit="return confirm('Bu takip silinsin mi?')">
+        <button class="btn btn-ghost btn-sm">Sil</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card empty">
+    <h2>Henüz takibin yok</h2>
+    <p>Bir arama yap, sonuçların altındaki "Bu aramayı takip et" bölümüne hedef fiyatını yaz.</p>
+    <a class="btn" href="/">Gezi ara</a>
+  </div>
+  {% endif %}
 </div>
-{% else %}
-<div class="panel">
-  <p><strong>Henüz takibin yok.</strong></p>
-  <p class="muted">Bir arama yap, sonuçların altındaki "Bu aramayı takip et" bölümünden hedef fiyatını gir.</p>
-  <a class="btn" href="/">Gezi ara</a>
-</div>
-{% endif %}
 {% endblock %}

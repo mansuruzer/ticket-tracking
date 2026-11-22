@@ -2,84 +2,122 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FAFAF9">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234A7D6E'/%3E%3Cpath d='M7 20l9-2.6 5-11.4 2.6 1.3-2.6 9 7.7-1.3 1.3 2.6L7 24z' fill='%23fff'/%3E%3C/svg%3E">
 <title>{% block title %}UcuzGez{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+  /* Nowdo "Stüdyo" teması: taş beyazı zemin, ince taş kenarlıklar, adaçayı vurgu.
+     Ölçüler Fibonacci (8·13·21·34·55·89), yazı ölçeği altın oran (13·16·21·26·42). */
   :root {
-    --paper: #EEF2F0; --surface: #FFFFFF; --ink: #16252A; --mute: #56666A; --line: #CFD8D5;
-    --accent: #0B6A4D; --accent-strong: #08553D; --soft: #DDEBE4; --warn: #9A3B1E; --warn-soft: #F6E6E0;
-    --r-sm: 6px; --r-md: 12px;
-    --step--1: 0.875rem; --step-0: 1rem; --step-1: 1.25rem; --step-2: 1.6rem; --step-3: 2.1rem;
+    --bg: #FAFAF9; --card: #FFFFFF; --input: #F5F5F4; --border: #E7E5E4; --border-strong: #D6D3D1;
+    --text: #1C1917; --sub: #57534E; --muted: #A8A29E;
+    --brand: #4A7D6E; --brand-hover: #3E6B5E; --brand-soft: #E7F0EC; --brand-ring: rgba(74, 125, 110, .18);
+    --accent: #B86A4C; --accent-soft: #F7EAE4;
+    --r-card: 18px; --r-ctl: 12px; --r-pill: 999px;
+    --s1: 8px; --s2: 13px; --s3: 21px; --s4: 34px; --s5: 55px; --s6: 89px;
+    --t-xs: 13px; --t-sm: 14px; --t-md: 16px; --t-lg: 21px; --t-xl: 26px; --t-2xl: 42px;
+    --shadow: 0 1px 2px rgba(28, 25, 23, .04), 0 16px 40px -28px rgba(28, 25, 23, .18);
+    --ease: cubic-bezier(.22, 1, .36, 1);
   }
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body { margin: 0; background: var(--paper); color: var(--ink);
-         font: 400 var(--step-0)/1.55 "Schibsted Grotesk", system-ui, sans-serif; }
-  a { color: var(--accent-strong); text-underline-offset: 3px; }
-  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; background: #F7F5F2; }
+  body { margin: 0; color: var(--text); font: 400 var(--t-md)/1.6 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+         font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; min-height: 100vh;
+         background: radial-gradient(900px 520px at 6% -10%, rgba(167, 211, 195, .22), transparent 60%),
+                     radial-gradient(800px 480px at 100% -6%, rgba(246, 205, 184, .20), transparent 55%),
+                     linear-gradient(180deg, #FBFAF8 0%, #F7F5F2 100%) fixed; }
+  ::selection { background: #CFE6DD; color: var(--text); }
+  a { color: var(--brand); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  a:hover { color: var(--brand-hover); }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  h1, h2, h3 { margin: 0; letter-spacing: -0.03em; font-weight: 800; line-height: 1.2; }
+  h3 { letter-spacing: -0.015em; font-weight: 700; }
+  p { margin: 0; }
   .num { font-variant-numeric: tabular-nums; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .sub { color: var(--sub); }
+  .muted { color: var(--muted); }
+  .xs { font-size: var(--t-xs); }
+  .sm { font-size: var(--t-sm); }
 
-  .top { display: flex; align-items: center; gap: 28px; padding: 18px clamp(16px, 4vw, 40px);
-         border-bottom: 1px solid var(--line); }
-  .brand { font-weight: 800; font-size: var(--step-1); letter-spacing: -0.02em; color: var(--ink); text-decoration: none; }
-  .nav { display: flex; gap: 4px; flex: 1; }
-  .nav a { padding: 6px 12px; border-radius: var(--r-sm); color: var(--mute); text-decoration: none; font-weight: 500; }
-  .nav a:hover { color: var(--ink); background: var(--surface); }
-  .nav a[aria-current="page"] { color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
-  .who { color: var(--mute); font-size: var(--step--1); white-space: nowrap; }
-  .who a { color: var(--mute); }
+  /* üst çubuk: 1fr | orta | 1fr  -> gezinme tam ortada, simetrik */
+  .top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--s3);
+         max-width: 1180px; margin: 0 auto; padding: var(--s3) var(--s3); }
+  .brand { justify-self: start; display: inline-flex; align-items: center; gap: var(--s1); font-weight: 800;
+           font-size: var(--t-lg); letter-spacing: -0.03em; color: var(--text); text-decoration: none; }
+  .brand-mark { width: 26px; height: 26px; border-radius: 8px; background: var(--brand); display: grid; place-items: center; }
+  .who { justify-self: end; display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); color: var(--sub); }
+  .who a { color: var(--sub); }
 
-  main { max-width: 920px; margin: 0 auto; padding: clamp(20px, 4vw, 44px) clamp(16px, 4vw, 40px) 80px; }
-  h1 { font-size: var(--step-3); line-height: 1.15; letter-spacing: -0.025em; font-weight: 800; margin: 0 0 12px; }
-  h2 { font-size: var(--step-1); letter-spacing: -0.01em; margin: 0 0 12px; }
-  p { margin: 0 0 12px; }
-  .lede { color: var(--mute); max-width: 60ch; }
+  /* Nowdo segment denetimi */
+  .seg { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: var(--r-pill);
+         background: var(--input); border: 1px solid var(--border); }
+  .seg > a, .seg > button, .seg > label { border: 0; background: transparent; font: inherit; font-weight: 600; font-size: var(--t-sm);
+         color: var(--sub); padding: 6px var(--s2); border-radius: var(--r-pill); cursor: pointer; text-decoration: none;
+         white-space: nowrap; transition: background-color .2s ease, box-shadow .2s ease, color .2s ease; }
+  .seg > a:hover, .seg > button:hover, .seg > label:hover { color: var(--text); }
+  .seg > [aria-current="page"], .seg > [aria-pressed="true"], .seg > label:has(input:checked) {
+         background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 1px 6px -2px rgba(0,0,0,.12); }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
 
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px;
-         padding: 0 20px; border: 0; border-radius: var(--r-sm); background: var(--accent); color: #fff;
-         font: 700 var(--step-0)/1 inherit; cursor: pointer; text-decoration: none; }
-  .btn:hover { background: var(--accent-strong); }
-  .btn[disabled] { opacity: .7; cursor: progress; }
-  .btn-quiet { background: transparent; color: var(--accent-strong); box-shadow: inset 0 0 0 1.5px var(--accent); }
-  .btn-quiet:hover { background: var(--soft); }
-  .btn-small { min-height: 34px; padding: 0 12px; font-size: var(--step--1); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s1); min-height: 44px;
+         padding: 0 var(--s3); border: 1px solid transparent; border-radius: var(--r-ctl); background: var(--brand); color: #fff;
+         font-family: inherit; font-weight: 600; font-size: var(--t-md); line-height: 1; cursor: pointer; text-decoration: none;
+         transition: transform .18s var(--ease), background-color .25s ease, box-shadow .25s ease; }
+  .btn:hover:not(:disabled) { background: var(--brand-hover); color: #fff; transform: translateY(-1px); box-shadow: 0 6px 16px -10px rgba(28,25,23,.35); }
+  .btn:active:not(:disabled) { transform: scale(.97); }
+  .btn:disabled { opacity: .75; cursor: progress; }
+  .btn-block { width: 100%; }
+  .btn-ghost { background: var(--card); color: var(--text); border-color: var(--border); }
+  .btn-ghost:hover:not(:disabled) { background: var(--input); color: var(--text); }
+  .btn-sm { min-height: 34px; padding: 0 var(--s2); font-size: var(--t-sm); }
 
-  .field label, .field-label { display: block; font-size: var(--step--1); font-weight: 500; color: var(--mute); margin-bottom: 4px; }
-  .input { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-sm);
-           background: var(--surface); color: var(--ink); font: inherit; }
-  .input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--soft); }
-  .check { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; cursor: pointer; }
-  .check input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .field { display: grid; gap: 6px; }
+  .label { font-size: var(--t-xs); font-weight: 600; color: var(--sub); }
+  .input { width: 100%; min-height: 44px; padding: 10px var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl);
+           background: var(--input); color: var(--text); font: inherit; transition: border-color .2s ease, box-shadow .25s ease, background-color .25s ease; }
+  .input::placeholder { color: var(--muted); }
+  .input:hover { border-color: var(--border-strong); }
+  .input:focus { outline: none; background: var(--card); border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-ring); }
+  .check { display: flex; align-items: center; gap: var(--s1); min-height: 34px; cursor: pointer; font-size: var(--t-sm); }
+  .check input { width: 18px; height: 18px; accent-color: var(--brand); margin: 0; }
 
-  .notice { padding: 12px 16px; border-radius: var(--r-sm); background: var(--soft); margin-bottom: 20px; }
-  .notice-error { background: var(--warn-soft); color: var(--warn); }
-  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: clamp(16px, 3vw, 28px); }
-  .muted { color: var(--mute); }
-  .small { font-size: var(--step--1); }
+  .notice { padding: var(--s2) var(--s3); border-radius: var(--r-ctl); background: var(--brand-soft); color: var(--text); font-size: var(--t-sm); }
+  .notice-error { background: var(--accent-soft); color: #7A3A22; }
+  .spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+             animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-  @media (max-width: 640px) {
-    .top { flex-wrap: wrap; gap: 8px 16px; }
-    .nav { order: 3; flex-basis: 100%; margin: 0 -12px; }
+  main { max-width: 1180px; margin: 0 auto; padding: var(--s1) var(--s3) var(--s6); }
+  @media (max-width: 720px) {
+    .top { grid-template-columns: 1fr auto; padding: var(--s2) var(--s2); }
+    .top .seg { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; justify-content: space-between; }
+    .top .seg > a { flex: 1; text-align: center; }
+    main { padding: var(--s1) var(--s2) var(--s5); }
   }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   {% block style %}{% endblock %}
 </style>
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="/">UcuzGez</a>
+  <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l7-2 4-9 2 1-2 7 6-1 1 2-17 5z"/></svg>
+  </span>UcuzGez</a>
   {% if user %}
-  <nav class="nav" aria-label="Bölümler">
+  <nav class="seg" aria-label="Bölümler">
     <a href="/" {% if page == 'ara' %}aria-current="page"{% endif %}>Ara</a>
     <a href="/takipler" {% if page == 'takip' %}aria-current="page"{% endif %}>Takiplerim</a>
     <a href="/ayarlar" {% if page == 'ayar' %}aria-current="page"{% endif %}>Ayarlar</a>
   </nav>
-  <span class="who">{{ user.name }}, <a href="/cikis">çıkış yap</a></span>
-  {% endif %}
+  <div class="who"><span>{{ user.name }}</span><a href="/cikis">Çıkış</a></div>
+  {% else %}<span></span><span></span>{% endif %}
 </header>
 <main>{% block body %}{% endblock %}</main>
 {% block script %}{% endblock %}

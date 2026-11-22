@@ -167,12 +167,12 @@ class TelegramBot:
                 return "Takip edilecek bir arama bulunamadı. Önce bir arama yap."
             if len(self.svc.db.watches(user["id"])) >= 10:
                 return "En fazla 10 takip açabilirsin. /takipler ile bak, /sil ile yer aç."
+            tg = params.pop("_targets", {}) or {}
             q = self.svc.params_to_query(params)
-            name = self._watch_name(q, rolling=True)
+            name = self._watch_name(q, True, tg.get("include"), tg.get("exclude"))
             wid = self.svc.db.add_watch(user["id"], name, params, None)
             return (f"Takip #{wid} açıldı: {name}.\nFiyat son 30 günün normalinden belirgin düşerse yazacağım. "
-                    f"Hedef fiyat koymak istersen: /takip {' '.join(q.origins)} {q.min_days}-{q.max_days} "
-                    f"{q.region or ''} HEDEF")
+                    "Hedef fiyat koymak istersen aynı aramayı /takip ile yazıp sonuna fiyatı ekle.")
         return None
 
     # ---- komutlar ---------------------------------------------------------------
@@ -282,25 +282,28 @@ class TelegramBot:
                          "fiyat geçmişi biriktirdikçe daha çok fırsat yakalar.")
         return "Bu komutu tanımıyorum. Tüm komutlar için /yardim."
 
+    def _places(self):
+        from .places import Places
+        return Places(self.svc.airports)
+
     def _search(self, chat_id: int, user, args: list[str]):
         ps = parse_search(args)
         ps.query.origins = self.svc.resolve_origins(user, ps.origin_text)
         names = ", ".join(self.svc.airports.city_name(o) for o in ps.query.origins)
-        from .regions import REGIONS
-        where = REGIONS[ps.query.region].label.lower() if ps.query.region else "her yer"
+        where = self._places().describe(ps.include, ps.exclude)
         self.send(chat_id, f"{names} çıkışlı, hedef: {where}. {ps.query.date_from:%d.%m}–{ps.query.date_to:%d.%m} "
                            f"arası başlayan {ps.query.min_days}-{ps.query.max_days} günlük geziler aranıyor, "
                            f"biraz sürebilir…")
         res = self.svc.plan(ps.query)
-        self.svc.db.kv_set(f"lastq:{chat_id}", self.svc.query_to_params(ps.query, ps.rolling_days or 60))
+        params = self.svc.query_to_params(ps.query, ps.rolling_days or 60)
+        params["_targets"] = {"include": ps.include, "exclude": ps.exclude}
+        self.svc.db.kv_set(f"lastq:{chat_id}", params)
         self.svc.db.kv_set(f"lastdays:{chat_id}", f"{ps.query.min_days}-{ps.query.max_days}")
         return (self.svc.format_result(res), self.result_keyboard())
 
-    def _watch_name(self, q, rolling: bool) -> str:
-        from .regions import REGIONS
+    def _watch_name(self, q, rolling: bool, include=None, exclude=None) -> str:
         ap = self.svc.airports
-        where = ", ".join(ap.city_name(c) for c in q.destinations) if q.destinations else \
-            (REGIONS[q.region].label if q.region else "her yer")
+        where = self._places().describe(include, exclude)
         when = "önümüzdeki 60 gün" if rolling else f"{q.date_from:%d.%m}–{q.date_to:%d.%m}"
         return f"{', '.join(ap.city_name(o) for o in q.origins)} çıkışlı, {where}, {q.min_days}-{q.max_days} gün ({when})"
 
@@ -314,7 +317,7 @@ class TelegramBot:
         ps.query.budget = None
         if len(self.svc.db.watches(user["id"])) >= 10:
             return "En fazla 10 takip açabilirsin. /takipler ile bak, /sil ile yer aç."
-        name = self._watch_name(ps.query, bool(ps.rolling_days))
+        name = self._watch_name(ps.query, bool(ps.rolling_days), ps.include, ps.exclude)
         wid = self.svc.db.add_watch(user["id"], name,
                                     self.svc.query_to_params(ps.query, ps.rolling_days), threshold)
         return (f"Takip #{wid} açıldı: {name}.\nYaklaşık {self.svc.s.watch_interval_min // 60} saatte bir bakacağım. "

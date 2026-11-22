@@ -22,7 +22,7 @@ def test_parse_basic():
     assert ps.origin_text == "IST"
     assert (q.date_from, q.date_to) == (date(2026, 12, 1), date(2026, 12, 20))
     assert (q.min_days, q.max_days) == (3, 5)
-    assert ps.budget == 4000 and q.destinations == ["VIE", "PRG"]
+    assert ps.budget == 4000 and sorted(q.destinations) == ["PRG", "VIE"]
     assert q.max_transfers == 0 and q.airlines == {"PC"}
 
 
@@ -197,3 +197,34 @@ def test_region_parse_and_filter():
     assert trips and all(t.dest_city == "BEG" and t.return_city == "BEG" for t in trips)
     q2 = TripQuery(["IST"], d1, d1, 3, 5)
     assert p.plan(q2).trips[0].dest_city == "VIE"
+
+
+def test_include_exclude_tokens():
+    ps = parse_search("IST 3-5 schengen -BG -BUH".split())
+    q = ps.query
+    assert "BG" in q.include_countries and q.exclude_countries == {"BG"} and q.exclude_cities == {"BUH"}
+    ps = parse_search("IST 3-5 balkanlar hariç RS ATH".split())
+    assert ps.query.exclude_countries == {"RS"} and ps.query.exclude_cities == {"ATH"}
+    # planlayıcı: Schengen, Bulgaristan hariç; Sofya ucuz olsa da çıkmamalı, Viyana çıkmalı
+    d1, d2 = D0, D0 + timedelta(days=4)
+    p, _ = make_planner([F("IST", "SOF", d1, 100), F("SOF", "IST", d2, 100),
+                         F("IST", "VIE", d1, 900), F("VIE", "IST", d2, 900)])
+    q = TripQuery(["IST"], d1, d1, 3, 5)
+    from ucuzgez.commands import build_query_targets
+    build_query_targets(q, ["r:schengen"], ["c:BG"])
+    assert [t.dest_city for t in p.plan(q).trips] == ["VIE"]
+    # birden çok şehir: Viyana ve Sofya, Bükreş yok
+    q = TripQuery(["IST"], d1, d1, 3, 5)
+    build_query_targets(q, ["y:VIE", "y:SOF"], [])
+    assert {t.dest_city for t in p.plan(q).trips} == {"VIE", "SOF"}
+
+
+def test_places_search_and_labels():
+    from ucuzgez.places import Places
+    pl = Places(AP)
+    ids = [x["id"] for x in pl.search("bulg")]
+    assert "c:BG" in ids
+    assert pl.search("buk")[0]["id"] == "y:BUH"          # Bükreş, Türkçe karakter olmadan
+    assert pl.search("schen")[0]["id"] == "r:schengen"
+    assert pl.search("VIE")[0]["id"] == "y:VIE"
+    assert pl.label("y:BUH") == "Bükreş, Romanya" and pl.label("c:BG") == "Bulgaristan"

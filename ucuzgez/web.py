@@ -14,6 +14,8 @@ from starlette.routing import Route
 from starlette.templating import Jinja2Templates
 
 from .formatting import ablative, airline_name, day_str, leg_links, money, short_day
+from .commands import build_query_targets
+from .places import Places
 from .planner import Trip, TripQuery
 from .regions import REGIONS, VISA_INFO_DATE
 from .services import Services
@@ -22,17 +24,20 @@ TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 COOKIE = "ug_t"
 AIRLINE_CHOICES = [("PC", "Pegasus"), ("VF", "AJet"), ("TK", "THY"), ("W6", "Wizz Air"),
                    ("FR", "Ryanair"), ("U2", "easyJet"), ("XQ", "SunExpress")]
-REGION_CHOICES = ["her-yer", "yurtdisi", "vizesiz", "kolay-vize", "schengen", "balkanlar",
-                  "kafkasya", "ortadogu", "avrupa", "yurtici"]
+QUICK_REGIONS = ["vizesiz", "schengen", "balkanlar", "kafkasya", "ortadogu", "yurtici", "kolay-vize", "avrupa"]
+STAY_PRESETS = [("2", "3", "Hafta sonu"), ("3", "5", "3–5 gün"), ("5", "8", "Bir hafta"), ("9", "14", "Uzun")]
 
 
 def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = None) -> Starlette:
     ap = svc.airports
+    places = Places(ap)
     cur = svc.s.currency
     TEMPLATES.env.globals.update(
         money=lambda v: money(v, cur), day_str=day_str, short_day=short_day, airline_name=airline_name,
         leg_links=leg_links, city=ap.city_name, ablative=ablative, airline_choices=AIRLINE_CHOICES,
-        regions=[REGIONS[k] for k in REGION_CHOICES], visa_date=VISA_INFO_DATE, provider=svc.s.provider,
+        quick_regions=[REGIONS[k] for k in QUICK_REGIONS], stay_presets=STAY_PRESETS, visa_date=VISA_INFO_DATE,
+        provider=svc.s.provider, place_label=places.label, place_kind=places.kind_label,
+        describe=places.describe, regions_all=REGIONS,
     )
     TEMPLATES.env.filters["city"] = ap.city_name
 
@@ -54,8 +59,19 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
     def defaults(user) -> dict:
         t = date.today()
         return {"origin": "", "date_from": (t + timedelta(days=1)).isoformat(),
-                "date_to": (t + timedelta(days=45)).isoformat(), "min_days": "3", "max_days": "6",
-                "region": "yurtdisi", "destinations": "", "budget": "", "max_ground_hours": "6"}
+                "date_to": (t + timedelta(days=45)).isoformat(), "min_days": "3", "max_days": "5",
+                "to": [], "not": [], "budget": "", "max_ground_hours": "6", "airlines": []}
+
+    def targets_from(f) -> tuple[list[str], list[str]]:
+        inc = [t for t in f.getlist("to") if places.valid(t)]
+        exc = [t for t in f.getlist("not") if places.valid(t)]
+        if f.get("region"):                      # eski linkler / takipler
+            inc.append(f"r:{f.get('region')}")
+        for c in (f.get("destinations") or "").replace(" ", ",").split(","):
+            if c.strip():
+                inc.append(f"y:{ap.city_of(c.strip().upper())}")
+        inc = [t for t in dict.fromkeys(inc) if t != "r:her-yer"]
+        return inc, list(dict.fromkeys(exc))
 
     # ---- form -> sorgu ---------------------------------------------------------
     def form_query(user, f) -> tuple[TripQuery, float | None]:
@@ -71,18 +87,14 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
             raise ValueError("Tarih, gün ya da bütçe alanında geçersiz bir değer var.")
         if d1 < today:
             raise ValueError("En erken gidiş tarihi bugünden önce olamaz.")
-        dests = [x.strip().upper() for x in (f.get("destinations") or "").replace(" ", ",").split(",") if x.strip()]
         airlines = set(f.getlist("airlines")) if hasattr(f, "getlist") else set()
-        region = REGIONS.get(f.get("region") or "her-yer", REGIONS["her-yer"])
+        inc, exc = targets_from(f)
         q = TripQuery(
             origins=origins, date_from=d1, date_to=d2, min_days=min(mn, mx), max_days=max(mn, mx),
-            destinations=dests or None, budget=budget,
-            open_jaw=f.get("same_city") != "on", max_transfers=0 if f.get("direct") == "on" else 1,
+            budget=budget, open_jaw=f.get("same_city") != "on", max_transfers=0 if f.get("direct") == "on" else 1,
             max_ground_hours=ground, airlines=airlines or None,
-            include_countries=set(region.include) if region.include is not None else None,
-            exclude_countries=set(region.exclude) if region.exclude else None,
-            region=region.key,
         )
+        build_query_targets(q, inc, exc)
         q.validate()
         return q, budget
 
@@ -97,23 +109,32 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
         return render(request, "index.html", user=u, page="ara", form=defaults(u),
                       origins=svc.home_origins(u), res=None, q=None, error=None)
 
+    def page_ctx(u, form, **kw):
+        return dict(user=u, page="ara", form=form, origins=svc.home_origins(u), res=None, q=None,
+                    error=None, trips=[], **kw)
+
     async def search(request: Request):
         u = current_user(request)
         if not u:
             return RedirectResponse("/", status_code=303)
         f = request.query_params if request.method == "GET" else await request.form()
-        form = {**defaults(u), **{k: f.get(k) for k in f.keys()}}
-        form["airlines"] = f.getlist("airlines")
+        inc, exc = targets_from(f)
+        form = {**defaults(u), **{k: f.get(k) for k in f.keys()}, "to": inc, "not": exc,
+                "airlines": f.getlist("airlines")}
         try:
             q, _ = form_query(u, f)
         except ValueError as e:
-            return render(request, "index.html", user=u, page="ara", form=form, origins=svc.home_origins(u),
-                          res=None, q=None, error=str(e), status=400)
+            return render(request, "index.html", status=400, **{**page_ctx(u, form), "error": str(e)})
         res = await run_in_threadpool(svc.plan, q)
-        return render(request, "index.html", user=u, page="ara", form=form, origins=svc.home_origins(u),
-                      res=res, q=q, trips=[trip_view(t) for t in res.trips], error=None,
-                      region=REGIONS.get(q.region or "her-yer"),
-                      query_string=urlencode([(k, v) for k in f.keys() for v in f.getlist(k)]))
+        ctx = page_ctx(u, form)
+        ctx.update(res=res, q=q, trips=[trip_view(t) for t in res.trips], where=places.describe(inc, exc),
+                   visa_notes=[REGIONS[t[2:]].note for t in inc if t.startswith("r:") and REGIONS[t[2:]].note])
+        return render(request, "index.html", **ctx)
+
+    async def api_places(request: Request):
+        if not current_user(request):
+            return JSONResponse([], status_code=401)
+        return JSONResponse(places.search(request.query_params.get("q", "")))
 
     async def watches(request: Request):
         u = current_user(request)
@@ -128,11 +149,14 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
                               error=str(e), status=400)
             q.budget = None
             rolling = 60 if f.get("rolling") == "on" else None
-            region = REGIONS.get(q.region or "her-yer")
-            where = ", ".join(ap.city_name(c) for c in q.destinations) if q.destinations else region.label
+            inc, exc = targets_from(f)
+            when = "önümüzdeki 60 gün" if rolling else f"{short_day(q.date_from)}–{short_day(q.date_to)}"
             name = (f.get("name") or "").strip() or \
-                f"{', '.join(ap.city_name(o) for o in q.origins)} çıkışlı, {where}, {q.min_days}-{q.max_days} gün"
-            svc.db.add_watch(u["id"], name, svc.query_to_params(q, rolling), budget)
+                f"{', '.join(ap.city_name(o) for o in q.origins)} çıkışlı, {places.describe(inc, exc)}, " \
+                f"{q.min_days}-{q.max_days} gün ({when})"
+            params = svc.query_to_params(q, rolling)
+            params["_targets"] = {"include": inc, "exclude": exc}
+            svc.db.add_watch(u["id"], name, params, budget)
             return RedirectResponse("/takipler?eklendi=1", status_code=303)
         return render(request, "watches.html", user=u, page="takip", items=svc.db.watches(u["id"]),
                       added=request.query_params.get("eklendi") == "1", error=None)
@@ -218,6 +242,7 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
         Route("/takip", legacy_redirect, methods=["POST"]),
         Route("/ev", legacy_redirect, methods=["POST"]),
         Route("/api/ara", api_search),
+        Route("/api/yerler", api_places),
         Route("/saglik", health),
         *(extra_routes or []),
     ], lifespan=lifespan)

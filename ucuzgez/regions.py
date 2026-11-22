@@ -17,7 +17,7 @@ SCHENGEN = {
 
 # Bordo pasaportla vizesiz (bazılarında önceden çevrimiçi kayıt gerekir: KR K-ETA, ID, KZ, SC)
 VISA_FREE = {
-    "AL", "AZ", "BA", "BY", "GE", "XK", "MK", "MD", "RS", "UA", "XN",          # Avrupa / yakın
+    "AL", "AZ", "BA", "BY", "GE", "XK", "KX", "MK", "MD", "RS", "UA", "XN",          # Avrupa / yakın
     "IR", "JO", "LB", "QA", "OM",                                               # Orta Doğu
     "KZ", "KG", "UZ", "MN",                                                     # Orta Asya
     "JP", "KR", "HK", "MO", "SG", "TH", "PH", "ID", "BN",                       # Asya
@@ -32,10 +32,10 @@ EASY_VISA = {
     "KE", "TZ", "MX", "ZA", "DO", "MZ", "NA",
 }
 
-BALKANS = {"AL", "BA", "BG", "GR", "HR", "XK", "ME", "MK", "RO", "RS", "SI"}
+BALKANS = {"AL", "BA", "BG", "GR", "HR", "XK", "KX", "ME", "MK", "RO", "RS", "SI"}
 CAUCASUS = {"GE", "AM", "AZ"}
 MIDDLE_EAST = {"AE", "QA", "SA", "JO", "LB", "OM", "BH", "KW", "IL", "IR", "IQ"}
-EUROPE = SCHENGEN | BALKANS | {"GB", "IE", "CY", "XN", "MD", "UA", "BY", "ME", "RS", "AL", "BA", "MK", "XK"}
+EUROPE = SCHENGEN | BALKANS | {"GB", "IE", "CY", "XN", "MD", "UA", "BY", "ME", "RS", "AL", "BA", "MK", "XK", "KX"}
 
 
 @dataclass(frozen=True)

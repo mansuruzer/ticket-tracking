@@ -38,7 +38,9 @@ class TripQuery:
     airlines: set[str] | None = None
     exclude_airlines: set[str] | None = None
     exclude_countries: set[str] | None = None
-    include_countries: set[str] | None = None    # bölge filtresi (örn. vizesiz ülkeler)
+    include_countries: set[str] | None = None    # bölge/ülke filtresi (örn. vizesiz ülkeler)
+    include_cities: set[str] | None = None       # ayrıca dahil edilen şehirler (ülke filtresiyle VEYA)
+    exclude_cities: set[str] | None = None
     region: str | None = None                    # gösterim için bölge anahtarı
     top_destinations: int = 12
     limit: int = 10
@@ -171,8 +173,8 @@ class Planner:
             if q.open_jaw:
                 near = []
                 for R, _km in self.airports.cities_near_city(D, max_km):
-                    if R in home or not self._country_ok(R, q):
-                        continue   # dönüş şehri de seçilen bölgede olmalı (vize!)
+                    if R in home or not self._return_ok(R, q):
+                        continue   # dönüş şehri de seçilen ülkelerde olmalı (vize!) ve hariç tutulmamalı
                     g = self.ground.estimate(D, R)
                     if g and g.hours <= q.max_ground_hours:
                         near.append((R, g))
@@ -213,12 +215,25 @@ class Planner:
                           len(candidates), notes)
 
     def _country_ok(self, city: str, q: TripQuery) -> bool:
+        """Şehir seçilen hedeflere uyuyor mu? (dahil: ülke VEYA şehir; sonra hariçler)"""
+        city = self.airports.city_of(city)
         c = self.airports.country_of(city)
+        if q.exclude_cities and city in q.exclude_cities:
+            return False
         if q.exclude_countries and c in q.exclude_countries:
             return False
-        if q.include_countries is not None and c not in q.include_countries:
-            return False
-        return True
+        if q.include_countries is None and q.include_cities is None:
+            return True
+        return bool((q.include_countries and c in q.include_countries)
+                    or (q.include_cities and city in q.include_cities))
+
+    def _return_ok(self, city: str, q: TripQuery) -> bool:
+        """Dönüş şehri: yalnız şehir seçildiyse (ülke/bölge yok) hariçler dışında her komşu olur."""
+        if q.include_countries is None and q.include_cities is not None:
+            c = self.airports.country_of(city)
+            return not ((q.exclude_cities and self.airports.city_of(city) in q.exclude_cities)
+                        or (q.exclude_countries and c in q.exclude_countries))
+        return self._country_ok(city, q)
 
     # ------------------------------------------------------------------
     @staticmethod

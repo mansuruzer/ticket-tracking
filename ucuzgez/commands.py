@@ -61,18 +61,39 @@ class ParsedSearch:
     query: TripQuery
     rolling_days: int | None
     budget: float | None
+    include: list[str] = None      # belirteçler: r:schengen, c:BG, y:VIE
+    exclude: list[str] = None
+
+
+def build_query_targets(q: TripQuery, include: list[str], exclude: list[str]) -> TripQuery:
+    """Dahil/hariç belirteçlerini sorguya uygular (web ve Telegram ortak)."""
+    from .geo import get_airports
+    from .places import Places
+    sel = Places(get_airports()).resolve(include, exclude)
+    q.include_countries = sel.include_countries
+    q.include_cities = sel.include_cities
+    q.exclude_countries = sel.exclude_countries or None
+    q.exclude_cities = sel.exclude_cities or None
+    q.destinations = sorted(sel.include_cities) if sel.only_cities else None
+    regs = [t[2:] for t in include if t.startswith("r:")]
+    q.region = regs[0] if regs else None
+    return q
 
 
 def parse_search(args: list[str], default_days: tuple[int, int] = (3, 7),
                  today: date | None = None) -> ParsedSearch:
+    """Serbest metin arama. Hedefler: bölge adı (schengen), ülke kodu (BG), şehir kodu (VIE).
+    Hariç tutmak için başına - koy (-BG, -BUH) ya da 'hariç' kelimesinden sonra yaz."""
     today = today or date.today()
     codes: list[str] = []
+    include: list[str] = []
+    exclude: list[str] = []
+    excluding = False
     dates: list[date] = []
     days: tuple[int, int] | None = None
     budget = None
     max_transfers, open_jaw = 1, True
     airlines: set[str] = set()
-    region: Region | None = None
     origin_text = None
 
     for raw in args:
@@ -80,6 +101,10 @@ def parse_search(args: list[str], default_days: tuple[int, int] = (3, 7),
         low = tok.lower()
         if not tok:
             continue
+        neg = excluding
+        if tok.startswith("-") and len(tok) > 1 and not tok[1].isdigit():
+            neg, tok, low = True, tok[1:], low[1:]
+        target = exclude if neg else include
         d = parse_date(tok, today)
         if d:
             dates.append(d)
@@ -94,24 +119,31 @@ def parse_search(args: list[str], default_days: tuple[int, int] = (3, 7),
                 days = (int(v), int(v))
             else:
                 budget = v
+        elif low in ("haric", "hariç", "harici", "disinda", "dışında"):
+            excluding = True
         elif low in ("direkt", "aktarmasiz", "aktarmasız"):
             max_transfers = 0
         elif low in ("aynisehir", "aynışehir", "kapali"):
             open_jaw = False
         elif len(tok) > 3 and find_region(tok):
-            region = find_region(tok)
+            target.append(f"r:{find_region(tok).key}")
         elif low in AIRLINE_WORDS:
             airlines.add(AIRLINE_WORDS[low])
         elif low in ("konum", "ev") and origin_text is None:
             origin_text = "konum"
+        elif re.fullmatch(r"[A-Za-z]{2}", tok):
+            target.append(f"c:{tok.upper()}")
         elif re.fullmatch(r"[A-Za-z]{3}(,[A-Za-z]{3})*", tok):
-            codes.extend(c.upper() for c in tok.split(","))
+            if neg:
+                exclude.extend(f"y:{c.upper()}" for c in tok.split(","))
+            else:
+                codes.extend(c.upper() for c in tok.split(","))
         else:
-            raise ValueError(f"Anlayamadım: '{tok}'. /yardim yaz.")
+            raise ValueError(f"'{tok}' kısmını anlayamadım")
 
     if origin_text is None and codes:
         origin_text = codes.pop(0)
-    destinations = codes or None
+    include += [f"y:{c}" for c in codes]
 
     rolling = None
     if not dates:
@@ -124,9 +156,6 @@ def parse_search(args: list[str], default_days: tuple[int, int] = (3, 7),
     mn, mx = days or default_days
 
     q = TripQuery(origins=["?"], date_from=d1, date_to=d2, min_days=mn, max_days=mx,
-                  destinations=destinations, budget=budget, open_jaw=open_jaw,
-                  max_transfers=max_transfers, airlines=airlines or None,
-                  include_countries=set(region.include) if region and region.include is not None else None,
-                  exclude_countries=set(region.exclude) if region and region.exclude else None,
-                  region=region.key if region else None)
-    return ParsedSearch(origin_text, q, rolling, budget)
+                  budget=budget, open_jaw=open_jaw, max_transfers=max_transfers, airlines=airlines or None)
+    build_query_targets(q, include, exclude)
+    return ParsedSearch(origin_text, q, rolling, budget, include, exclude)

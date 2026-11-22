@@ -1,308 +1,435 @@
 {% extends "base.html" %}
-{% block title %}{% if res %}{{ trips|length }} gezi bulundu – UcuzGez{% else %}Gezi ara – UcuzGez{% endif %}{% endblock %}
+{% block title %}{% if res %}{{ trips|length }} gezi – UcuzGez{% else %}Gezi ara – UcuzGez{% endif %}{% endblock %}
 
 {% block style %}
-  .query { margin-bottom: 40px; }
-  .sentence { font-size: clamp(1.25rem, 3.2vw, 1.75rem); line-height: 2.1; font-weight: 500;
-              letter-spacing: -0.01em; max-width: 34em; margin: 0 0 20px; }
-  .slot { display: inline-block; vertical-align: baseline; border: 0; border-bottom: 2px solid var(--ink);
-          background: transparent; color: var(--accent-strong); font: inherit; font-weight: 700;
-          padding: 0 2px; margin: 0 2px; border-radius: 0; min-height: 0; line-height: 1.3; }
-  .slot:focus { outline: none; border-bottom-color: var(--accent); background: var(--soft); }
-  .slot::placeholder { color: var(--mute); font-weight: 500; }
-  .slot-origin { width: 7.5em; }
-  .slot-date { width: 8.6em; }
-  .slot-num { width: 2.2em; text-align: center; -moz-appearance: textfield; }
-  .slot-num::-webkit-inner-spin-button { display: none; }
-  .origin-hint { font-size: var(--step--1); color: var(--mute); margin: -12px 0 20px; }
+  /* altın oran: arama paneli 38.2 / sonuçlar 61.8 */
+  .layout { display: grid; grid-template-columns: minmax(0, 382fr) minmax(0, 618fr); gap: var(--s4); align-items: start; padding-top: var(--s2); }
+  .panel { position: sticky; top: var(--s3); padding: var(--s4) var(--s3) var(--s3); }
+  .panel > summary { list-style: none; cursor: default; }
+  .panel > summary::-webkit-details-marker { display: none; }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); margin-bottom: var(--s3); }
+  .panel-head h1 { font-size: var(--t-xl); }
+  .edit-hint { display: none; font-size: var(--t-sm); font-weight: 600; color: var(--brand); text-align: right; }
+  .stack { display: grid; gap: var(--s3); }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .preset { border: 1px solid var(--border); background: var(--card); color: var(--sub); font: inherit; font-size: var(--t-xs);
+            font-weight: 600; padding: 5px 11px; border-radius: var(--r-pill); cursor: pointer; transition: all .2s ease; }
+  .preset:hover { color: var(--text); border-color: var(--border-strong); }
+  .preset[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: #fff; }
 
-  .regions { border: 0; padding: 0; margin: 0 0 16px; }
-  .regions legend { font-weight: 700; margin-bottom: 10px; padding: 0; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip input { position: absolute; opacity: 0; pointer-events: none; }
-  .chip span { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 999px;
-               background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; font-weight: 500; }
-  .chip span:hover { box-shadow: inset 0 0 0 1.5px var(--ink); }
-  .chip input:checked + span { background: var(--ink); color: #fff; box-shadow: none; }
-  .chip input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
-  .region-note { font-size: var(--step--1); color: var(--mute); margin: 8px 0 0; min-height: 1.4em; }
+  /* belirteç alanı (hedefler / hariçler) */
+  .tokens { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 44px;
+            padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--input); cursor: text;
+            transition: border-color .2s ease, box-shadow .25s ease, background-color .25s ease; }
+  .tokens:hover { border-color: var(--border-strong); }
+  .tokens:focus-within { background: var(--card); border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-ring); }
+  .tokens input[type=text] { flex: 1 1 120px; min-width: 120px; border: 0; background: transparent; font: inherit; color: var(--text); padding: 4px; outline: none; }
+  .tokens input::placeholder { color: var(--muted); }
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: var(--r-pill);
+          background: var(--brand-soft); color: var(--brand-hover); font-size: var(--t-sm); font-weight: 600; line-height: 1.4;
+          animation: enter .25s var(--ease) both; }
+  .tokens-not .chip { background: var(--accent-soft); color: #8A4A31; }
+  .chip button { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 50%; padding: 0;
+                 background: transparent; color: inherit; cursor: pointer; opacity: .7; }
+  .chip button:hover { opacity: 1; background: rgba(28, 25, 23, .08); }
+  .suggest { position: absolute; z-index: 20; left: -1px; right: -1px; top: calc(100% + 6px); margin: 0; padding: 6px; list-style: none;
+             background: var(--card); border: 1px solid var(--border); border-radius: var(--r-ctl); box-shadow: 0 16px 40px -16px rgba(28,25,23,.25);
+             max-height: 320px; overflow: auto; animation: enter .18s var(--ease) both; }
+  .suggest[hidden] { display: none; }
+  .suggest li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+  .suggest li[aria-selected="true"], .suggest li:hover { background: var(--input); }
+  .suggest .k { font-size: var(--t-xs); color: var(--muted); white-space: nowrap; }
+  .quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 
-  .more { margin: 20px 0 24px; }
-  .more summary { cursor: pointer; font-weight: 500; color: var(--accent-strong); width: fit-content; }
-  .more-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 24px; margin-top: 16px; }
-  .more-wide { grid-column: 1 / -1; }
-  .airlines { display: flex; flex-wrap: wrap; gap: 4px 18px; }
-  .actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .more { border-top: 1px solid var(--border); padding-top: var(--s2); }
+  .more summary { cursor: pointer; font-size: var(--t-sm); font-weight: 600; color: var(--sub); list-style: none; display: flex; justify-content: space-between; }
+  .more summary::-webkit-details-marker { display: none; }
+  .more summary::after { content: "+"; font-weight: 500; }
+  .more[open] summary::after { content: "–"; }
+  .more-body { display: grid; gap: var(--s2); padding-top: var(--s2); }
+  .airlines { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--s2); }
+  .suffix { position: relative; }
+  .suffix .input { padding-right: 56px; }
+  .suffix span { position: absolute; right: var(--s2); top: 50%; transform: translateY(-50%); color: var(--muted); font-size: var(--t-sm); pointer-events: none; }
 
-  .results-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-                  border-top: 2px solid var(--ink); padding-top: 20px; margin-bottom: 8px; }
-  .results-head h2 { font-size: var(--step-2); margin: 0; }
-  .sort { display: flex; gap: 4px; align-items: center; }
-  .sort button { border: 0; background: none; font: inherit; color: var(--mute); padding: 6px 10px;
-                 border-radius: var(--r-sm); cursor: pointer; min-height: 36px; }
-  .sort button[aria-pressed="true"] { color: var(--ink); font-weight: 700; background: var(--surface);
-                                     box-shadow: inset 0 0 0 1px var(--line); }
-  .meta { color: var(--mute); font-size: var(--step--1); margin-bottom: 20px; }
+  /* sonuçlar */
+  .results { display: grid; gap: var(--s3); min-width: 0; }
+  .res-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s2); flex-wrap: wrap; padding-top: var(--s1); }
+  .res-head h2 { font-size: var(--t-xl); }
+  .res-meta { margin-top: 4px; font-size: var(--t-sm); color: var(--sub); }
+  .trip { padding: var(--s3) var(--s3) var(--s2); animation: enter .4s var(--ease) both; }
+  .trip-top { display: grid; grid-template-columns: 1fr auto; gap: var(--s2); align-items: start; }
+  .trip h3 { font-size: var(--t-lg); }
+  .trip-when { margin-top: 2px; font-size: var(--t-sm); color: var(--sub); }
+  .price { text-align: right; font-size: var(--t-xl); font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; }
+  .price small { display: block; font-size: var(--t-xs); font-weight: 500; letter-spacing: 0; color: var(--muted); }
+  .tag { display: inline-block; margin-left: var(--s1); padding: 1px 8px; border-radius: var(--r-pill); font-size: var(--t-xs); font-weight: 600;
+         background: var(--brand-soft); color: var(--brand-hover); vertical-align: 3px; letter-spacing: 0; }
 
-  .trips { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
-  .trip { background: var(--surface); border-radius: var(--r-md); padding: 20px clamp(16px, 3vw, 26px);
-          box-shadow: inset 0 0 0 1px var(--line); }
-  .trip-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-  .trip h3 { font-size: var(--step-1); margin: 0; letter-spacing: -0.01em; }
-  .when { color: var(--mute); margin: 2px 0 0; }
-  .price { font-size: var(--step-2); font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; line-height: 1.1; text-align: right; }
-  .price small { display: block; font-size: var(--step--1); font-weight: 500; color: var(--mute); letter-spacing: 0; }
+  /* rota: eşit aralıklı, simetrik zaman çizgisi */
+  .route { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; margin: var(--s3) 0 var(--s2); padding: 0; list-style: none; }
+  .stop { --solid: linear-gradient(var(--text), var(--text)); --dash: repeating-linear-gradient(90deg, var(--muted) 0 6px, transparent 6px 11px);
+          --l: var(--solid); --r: var(--solid);
+          position: relative; display: grid; justify-items: center; text-align: center; gap: 2px; padding-top: 21px; min-width: 0;
+          background: var(--l) left 0 top 5px / 50% 2px no-repeat, var(--r) right 0 top 5px / 50% 2px no-repeat; }
+  .stop:first-child { --l: none; }
+  .stop:last-child { --r: none; }
+  .stop.dash-r { --r: var(--dash); }
+  .stop.dash-l { --l: var(--dash); }
+  .stop::after { content: ""; position: absolute; top: 0; left: calc(50% - 6px); width: 12px; height: 12px; border-radius: 50%;
+                 background: var(--card); box-shadow: inset 0 0 0 2.5px var(--text); }
+  .stop.home::after { background: var(--text); }
+  .stop b { font-size: var(--t-sm); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .stop span { font-size: var(--t-xs); color: var(--sub); }
+  .stop em { font-style: normal; font-size: var(--t-xs); color: var(--muted); }
 
-  /* rota çizgisi: kartın imzası */
-  .route { list-style: none; padding: 0; margin: 22px 0 18px; display: flex; align-items: flex-start; }
-  .stop { flex: 0 0 auto; display: grid; justify-items: center; text-align: center; gap: 2px; min-width: 76px; max-width: 120px; }
-  .stop::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--surface);
-                  box-shadow: inset 0 0 0 3px var(--ink); margin-bottom: 6px; }
-  .stop-home::before { background: var(--ink); }
-  .stop b { font-size: var(--step-0); line-height: 1.2; }
-  .stop span { font-size: var(--step--1); color: var(--mute); }
-  .seg { flex: 1 1 auto; position: relative; min-width: 30px; margin: 5px -26px 0; padding-top: 10px; text-align: center;
-         font-size: var(--step--1); color: var(--mute); }
-  .seg::before { content: ""; position: absolute; top: 0; left: 26px; right: 26px; border-top: 2px solid var(--ink); }
-  .seg-ground::before { border-top: 2px dashed var(--mute); }
-  .seg span { display: inline-block; padding: 0 30px; }
+  .legs { display: grid; margin: 0; border-top: 1px solid var(--border); }
+  .leg { display: grid; grid-template-columns: 55px 1fr auto; gap: 2px var(--s2); align-items: baseline; padding: var(--s2) 0; border-bottom: 1px solid var(--border); }
+  .leg:last-child { border-bottom: 0; }
+  .leg dt { font-size: var(--t-sm); font-weight: 700; }
+  .leg dd { margin: 0; font-size: var(--t-sm); }
+  .leg .amt { font-weight: 700; text-align: right; }
+  .leg .links { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px var(--s2); font-size: var(--t-xs); }
+  .leg .links a { font-weight: 600; text-decoration: none; }
+  .leg .links a:hover { text-decoration: underline; }
+  .saving { margin: var(--s1) 0; padding: 10px var(--s2); border-radius: var(--r-ctl); background: var(--brand-soft); font-size: var(--t-sm); }
 
-  .legs { display: grid; gap: 10px; margin: 0; border-top: 1px solid var(--line); padding-top: 14px; }
-  .leg { display: grid; grid-template-columns: 70px 1fr auto; gap: 4px 12px; align-items: baseline; }
-  .leg dt { font-weight: 700; }
-  .leg dd { margin: 0; }
-  .leg .links { grid-column: 2 / -1; font-size: var(--step--1); display: flex; gap: 14px; flex-wrap: wrap; }
-  .leg .amount { font-weight: 700; }
-  .saving { margin: 14px 0 0; padding: 10px 14px; border-radius: var(--r-sm); background: var(--soft); font-size: var(--step--1); }
-  .estimate { color: var(--mute); }
+  .empty { padding: var(--s5) var(--s4); text-align: center; }
+  .empty h2 { font-size: var(--t-xl); margin-bottom: var(--s1); }
+  .empty p { max-width: 46ch; margin: 0 auto; color: var(--sub); }
+  .ideas { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); margin-top: var(--s4); text-align: left; }
+  .idea { display: grid; gap: 4px; padding: var(--s3); border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--input);
+          color: var(--text); text-decoration: none; transition: transform .25s var(--ease), border-color .2s ease, background-color .2s ease; }
+  .idea:hover { color: var(--text); background: var(--card); border-color: var(--border-strong); transform: translateY(-2px); }
+  .idea b { font-size: var(--t-md); }
+  .idea span { font-size: var(--t-xs); color: var(--sub); }
 
-  .track { margin-top: 32px; }
-  .track-row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-top: 12px; }
-  .track-row .field { flex: 0 1 220px; }
-  .empty { padding: 28px; text-align: left; }
+  .track { padding: var(--s3); display: grid; gap: var(--s2); }
+  .track h3 { font-size: var(--t-lg); }
+  .track-row { display: grid; grid-template-columns: 1fr auto; gap: var(--s2); align-items: end; }
 
-  @media (max-width: 560px) {
+  @media (max-width: 1023px) {
+    .layout { grid-template-columns: 1fr; gap: var(--s3); }
+    .panel { position: static; padding: var(--s3); }
+    .has-results .panel:not([open]) { padding: var(--s2) var(--s3); }
+    .has-results .panel > summary { cursor: pointer; }
+    .has-results .panel:not([open]) .panel-head { margin: 0; }
+    .has-results .edit-hint { display: inline; }
+    .ideas { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .trip { padding: var(--s2) var(--s2) var(--s1); }
     .route:not(.route-open) { display: none; }
-    .legs { margin-top: 14px; }
-    .route { flex-direction: column; gap: 0; margin-left: 4px; }
-    .stop { display: grid; grid-template-columns: 12px auto; justify-items: start; text-align: left; column-gap: 12px;
-            max-width: none; align-items: center; }
-    .stop::before { grid-row: 1 / 3; margin: 0; }
-    .seg { margin: 0 0 0 5px; padding: 6px 0 6px 18px; text-align: left; min-height: 34px; }
-    .seg::before { top: -4px; bottom: -4px; left: 0; right: auto; border-top: 0; border-left: 2px solid var(--ink); }
-    .seg-ground::before { border-left: 2px dashed var(--mute); border-top: 0; }
-    .seg span { padding: 0; }
-    .leg { grid-template-columns: 56px 1fr auto; }
-    .price { font-size: var(--step-1); }
+    .legs { margin-top: var(--s2); }
+    .route { grid-auto-flow: row; grid-auto-columns: auto; margin-left: 4px; }
+    .stop { justify-items: start; text-align: left; padding: 0 0 var(--s3) 26px;
+            --dash: repeating-linear-gradient(180deg, var(--muted) 0 6px, transparent 6px 11px);
+            background: var(--r) left 5px top 8px / 2px 100% no-repeat; }
+    .stop::after { left: 0; top: 2px; }
+    .leg { grid-template-columns: 50px 1fr auto; }
+    .track-row { grid-template-columns: 1fr; }
   }
 {% endblock %}
 
 {% block body %}
-{% set hasres = res is not none %}
-<form class="query" action="/ara" method="get" id="search">
-  <h1 class="sr">Gezi ara</h1>
-  <p class="sentence">
-    <label class="sr" for="origin">Kalkış</label>
-    <input class="slot slot-origin" id="origin" name="origin" value="{{ form.origin }}"
-           placeholder="{% if origins %}{{ origins[0]|city }}{% else %}nereden{% endif %}" autocomplete="off"{% if not origins %} required{% endif %}>
-    çıkışlı,
-    <label class="sr" for="date_from">En erken gidiş</label>
-    <input class="slot slot-date num" type="date" id="date_from" name="date_from" value="{{ form.date_from }}" required>
-    ile
-    <label class="sr" for="date_to">En geç gidiş</label>
-    <input class="slot slot-date num" type="date" id="date_to" name="date_to" value="{{ form.date_to }}" required>
-    arasında başlayan,
-    <label class="sr" for="min_days">En az gün</label>
-    <input class="slot slot-num num" type="number" min="1" max="30" id="min_days" name="min_days" value="{{ form.min_days }}" required>
-    ile
-    <label class="sr" for="max_days">En çok gün</label>
-    <input class="slot slot-num num" type="number" min="1" max="30" id="max_days" name="max_days" value="{{ form.max_days }}" required>
-    günlük bir gezi.
-  </p>
-  <p class="origin-hint">
-    {% if origins %}Kalkışı boş bırakırsan konumuna yakın havalimanlarından ararım: {% for o in origins %}{{ o|city }}{% if not loop.last %}, {% endif %}{% endfor %}.
-    Birden fazla şehir için virgülle yaz (IST, ESB).
-    {% else %}Şehir ya da havalimanı kodu yaz, örneğin IST ya da SAW. Konumunu <a href="/ayarlar">Ayarlar</a>'dan kaydedersen boş bırakabilirsin.{% endif %}
-  </p>
+<div class="layout {% if res %}has-results{% endif %}">
+  <details class="panel card" id="panel" open>
+    <summary class="panel-head">
+      <h1>{% if res %}Aramayı düzenle{% else %}Gezi ara{% endif %}</h1>
+      <span class="edit-hint">{% if res %}{{ form.min_days }}–{{ form.max_days }} gün, {{ where }}{% endif %}</span>
+    </summary>
+    <form action="/ara" method="get" id="search" class="stack" autocomplete="off">
+      <div class="field">
+        <label class="label" for="origin">Nereden</label>
+        <input class="input" id="origin" name="origin" value="{{ form.origin or '' }}"
+               placeholder="{% if origins %}Konumum: {% for o in origins %}{{ o|city }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Şehir ya da kod, örn. IST{% endif %}"
+               {% if not origins %}required{% endif %}>
+      </div>
 
-  <fieldset class="regions">
-    <legend>Nereye?</legend>
-    <div class="chips">
-      {% for r in regions %}
-      <label class="chip"><input type="radio" name="region" value="{{ r.key }}" data-note="{{ r.note }}"
-             {% if form.region == r.key %}checked{% endif %}><span>{{ r.label }}</span></label>
-      {% endfor %}
-    </div>
-    <p class="region-note" id="region-note" aria-live="polite"></p>
-  </fieldset>
+      <div class="pair">
+        <div class="field">
+          <label class="label" for="date_from">En erken gidiş</label>
+          <input class="input num" type="date" id="date_from" name="date_from" value="{{ form.date_from }}" required>
+        </div>
+        <div class="field">
+          <label class="label" for="date_to">En geç gidiş</label>
+          <input class="input num" type="date" id="date_to" name="date_to" value="{{ form.date_to }}" required>
+        </div>
+      </div>
 
-  <details class="more" {% if form.destinations or form.budget or form.airlines or form.direct or form.same_city %}open{% endif %}>
-    <summary>Daha fazla seçenek</summary>
-    <div class="more-grid">
       <div class="field">
-        <label for="destinations">Sadece bu şehirler</label>
-        <input class="input" id="destinations" name="destinations" value="{{ form.destinations }}" placeholder="VIE, PRG, BUD">
+        <span class="label">Kaç gün</span>
+        <div class="presets" id="stay">
+          {% for a, b, name in stay_presets %}
+          <button type="button" class="preset" data-min="{{ a }}" data-max="{{ b }}"
+                  aria-pressed="{{ 'true' if form.min_days|string == a and form.max_days|string == b else 'false' }}">{{ name }}</button>
+          {% endfor %}
+        </div>
+        <div class="pair">
+          <div class="suffix"><label class="sr" for="min_days">En az gün</label><input class="input num" type="number" min="1" max="30" id="min_days" name="min_days" value="{{ form.min_days }}" required><span>en az</span></div>
+          <div class="suffix"><label class="sr" for="max_days">En çok gün</label><input class="input num" type="number" min="1" max="30" id="max_days" name="max_days" value="{{ form.max_days }}" required><span>en çok</span></div>
+        </div>
       </div>
+
       <div class="field">
-        <label for="budget">Toplam en fazla</label>
-        <input class="input num" type="number" min="0" step="50" id="budget" name="budget" value="{{ form.budget }}" placeholder="Sınır yok">
-      </div>
-      <div class="field">
-        <label for="max_ground_hours">Şehirler arası otobüs/tren en fazla (saat)</label>
-        <input class="input num" type="number" min="0" max="12" step="0.5" id="max_ground_hours" name="max_ground_hours" value="{{ form.max_ground_hours }}">
-      </div>
-      <div class="field more-wide">
-        <span class="field-label">Havayolu (hiçbiri seçili değilse hepsi)</span>
-        <div class="airlines">
-          {% for code, name in airline_choices %}
-          <label class="check"><input type="checkbox" name="airlines" value="{{ code }}" {% if code in (form.airlines or []) %}checked{% endif %}> {{ name }}</label>
+        <span class="label" id="to-label">Nereye</span>
+        <div class="tokens" data-name="to" aria-labelledby="to-label">
+          {% for t in form.to %}<span class="chip">{{ place_label(t) }}<input type="hidden" name="to" value="{{ t }}"><button type="button" aria-label="{{ place_label(t) }} kaldır"><svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.6"><path d="M1 1l8 8M9 1l-8 8"/></svg></button></span>{% endfor %}
+          <input type="text" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-label="Hedef ekle" placeholder="{% if form.to %}Ekle{% else %}Her yer. Ülke, şehir ya da bölge ekle{% endif %}">
+          <ul class="suggest" role="listbox" hidden></ul>
+        </div>
+        <div class="quick" aria-label="Hızlı bölgeler">
+          {% for r in quick_regions[:6] %}
+          <button type="button" class="preset" data-add="r:{{ r.key }}" data-label="{{ r.label }}">{{ r.label }}</button>
           {% endfor %}
         </div>
       </div>
-      <div class="more-wide">
-        <label class="check"><input type="checkbox" name="direct" {% if form.direct %}checked{% endif %}> Sadece aktarmasız uçuşlar</label><br>
-        <label class="check"><input type="checkbox" name="same_city" {% if form.same_city %}checked{% endif %}> Gittiğim şehirden döneyim (başka şehirden dönüş önerme)</label>
+
+      <div class="field">
+        <span class="label" id="not-label">Hariç tut</span>
+        <div class="tokens tokens-not" data-name="not" aria-labelledby="not-label">
+          {% for t in form.not %}<span class="chip">{{ place_label(t) }}<input type="hidden" name="not" value="{{ t }}"><button type="button" aria-label="{{ place_label(t) }} kaldır"><svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.6"><path d="M1 1l8 8M9 1l-8 8"/></svg></button></span>{% endfor %}
+          <input type="text" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-label="Hariç tutulacak yer ekle" placeholder="Örn. Bulgaristan, Bükreş">
+          <ul class="suggest" role="listbox" hidden></ul>
+        </div>
       </div>
-    </div>
+
+      <div class="field">
+        <label class="label" for="budget">Toplam bütçe</label>
+        <div class="suffix"><input class="input num" type="number" min="0" step="50" id="budget" name="budget" value="{{ form.budget or '' }}" placeholder="Sınır yok"><span>₺</span></div>
+      </div>
+
+      <details class="more" {% if form.airlines or form.direct or form.same_city %}open{% endif %}>
+        <summary>Diğer seçenekler</summary>
+        <div class="more-body">
+          <label class="check"><input type="checkbox" name="direct" {% if form.direct %}checked{% endif %}> Sadece aktarmasız uçuşlar</label>
+          <label class="check"><input type="checkbox" name="same_city" {% if form.same_city %}checked{% endif %}> Gittiğim şehirden döneyim</label>
+          <div class="field">
+            <label class="label" for="max_ground_hours">Başka şehirden dönüşte en fazla otobüs/tren süresi</label>
+            <div class="suffix"><input class="input num" type="number" min="0" max="12" step="0.5" id="max_ground_hours" name="max_ground_hours" value="{{ form.max_ground_hours }}"><span>saat</span></div>
+          </div>
+          <div class="field">
+            <span class="label">Havayolu (seçmezsen hepsi)</span>
+            <div class="airlines">
+              {% for code, name in airline_choices %}
+              <label class="check"><input type="checkbox" name="airlines" value="{{ code }}" {% if code in (form.airlines or []) %}checked{% endif %}> {{ name }}</label>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <button class="btn btn-block" id="go">Gezi bul</button>
+    </form>
   </details>
 
-  <div class="actions">
-    <button class="btn" id="go">Gezi bul</button>
-    <span class="muted small" id="wait" hidden>Yüzlerce uçuş taranıyor, 10–30 saniye sürebilir.</span>
-  </div>
-</form>
+  <section class="results" aria-live="polite">
+    {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
 
-{% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+    {% if not res %}
+    <div class="card empty">
+      <h2>Nereye gitsek?</h2>
+      <p>Tarih aralığını ve kaç gün kalmak istediğini seç. Hedefi boş bırakırsan en ucuz yerleri ben bulurum. Bir şehre gidip yakındaki başka bir şehirden dönmek daha ucuzsa onu da gösteririm.</p>
+      {% if origins %}
+      <div class="ideas">
+        <a class="idea" href="/ara?min_days=2&max_days=3&to=r:vizesiz"><b>Vizesiz hafta sonu</b><span>2–3 gün, önümüzdeki 45 gün</span></a>
+        <a class="idea" href="/ara?min_days=3&max_days=5&to=r:schengen"><b>Schengen kaçamağı</b><span>3–5 gün, vizen varsa</span></a>
+        <a class="idea" href="/ara?min_days=5&max_days=8&to=r:balkanlar"><b>Bir hafta Balkanlar</b><span>5–8 gün, otobüsle şehir değiştirerek</span></a>
+      </div>
+      {% else %}
+      <p class="sm" style="margin-top:var(--s3)"><a href="/ayarlar">Konumunu kaydet</a>, kalkış yerini her seferinde yazmana gerek kalmasın.</p>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="res-head">
+      <div>
+        <h2>{% if trips %}{{ trips|length }} gezi bulundu{% else %}Gezi bulunamadı{% endif %}</h2>
+        <p class="res-meta">{{ q.origins|map('city')|join(', ') }} çıkışlı, {{ where }}. {{ res.destinations_scanned }} şehre bakıldı.</p>
+      </div>
+      {% if trips|length > 1 %}
+      <div class="seg" role="group" aria-label="Sırala">
+        <button type="button" data-sort="total" aria-pressed="true">En ucuz</button>
+        <button type="button" data-sort="date" aria-pressed="false">En erken</button>
+        <button type="button" data-sort="days" aria-pressed="false">En kısa</button>
+      </div>
+      {% endif %}
+    </div>
+    {% for n in visa_notes %}<p class="notice">{{ n }}</p>{% endfor %}
+    {% if provider == 'mock' %}<p class="notice notice-error">Şu an deneme verisi gösteriliyor, fiyatlar gerçek değil.</p>
+    {% elif provider == 'travelpayouts' %}<p class="xs sub">Fiyatlar son 48 saatte görülen en düşük fiyatlardır. Satın almadan önce linkten kontrol et.</p>{% endif %}
+    {% for n in res.notes %}<p class="notice">{{ n }}</p>{% endfor %}
 
-{% if hasres %}
-<section aria-labelledby="results-title">
-  <div class="results-head">
-    <h2 id="results-title">{% if trips %}{{ trips|length }} gezi bulundu{% else %}Gezi bulunamadı{% endif %}</h2>
-    {% if trips|length > 1 %}
-    <div class="sort" role="group" aria-label="Sırala">
-      <span class="muted small">Sırala:</span>
-      <button type="button" data-sort="total" aria-pressed="true">Fiyat</button>
-      <button type="button" data-sort="date" aria-pressed="false">Tarih</button>
-      <button type="button" data-sort="days" aria-pressed="false">Süre</button>
+    {% if not trips %}
+    <div class="card empty">
+      <h2>Bu ölçütlere uyan gezi yok</h2>
+      <p>Tarih aralığını genişlet, gün sayısını esnet ya da hariç tuttuğun yerleri azalt. Bütçe koyduysan kaldırıp tekrar dene.</p>
+    </div>
+    {% else %}
+    <div id="trips" class="results">
+      {% for v in trips %}{% set t = v.t %}{% set o = t.outbound %}{% set i = t.inbound %}
+      <article class="trip card" data-total="{{ v.total }}" data-date="{{ v.date }}" data-days="{{ v.days }}" style="animation-delay: {{ [loop.index0, 8]|min * 40 }}ms">
+        <div class="trip-top">
+          <div>
+            <h3>{{ city(t.dest_city) }}{% if t.open_jaw %}<span class="tag">dönüş {{ ablative(city(t.return_city)) }}</span>{% endif %}</h3>
+            <p class="trip-when num">{{ day_str(o.depart) }} – {{ day_str(i.depart) }}, {{ t.days }} gün</p>
+          </div>
+          <p class="price num">{{ money(t.total) }}<small>{% if t.verified %}canlı fiyat{% elif t.ground %}yol tahmini dahil{% else %}gidiş-dönüş{% endif %}</small></p>
+        </div>
+
+        <ol class="route{% if t.ground %} route-open{% endif %}" aria-label="Rota">
+          <li class="stop home"><b>{{ city(o.origin_city) }}</b><span class="num">{{ short_day(o.depart) }}{% if o.depart_time %} {{ o.depart_time }}{% endif %}</span></li>
+          {% if t.ground %}
+          <li class="stop dash-r"><b>{{ city(t.dest_city) }}</b><em>otobüs/tren ~{{ t.ground.hours|round(1) }} sa</em></li>
+          <li class="stop dash-l"><b>{{ city(t.return_city) }}</b><span class="num">{{ short_day(i.depart) }}{% if i.depart_time %} {{ i.depart_time }}{% endif %}</span></li>
+          {% else %}
+          <li class="stop"><b>{{ city(t.dest_city) }}</b><span class="num">{{ short_day(i.depart) }}{% if i.depart_time %} {{ i.depart_time }}{% endif %}</span></li>
+          {% endif %}
+          <li class="stop home"><b>{{ city(i.destination_city) }}</b><em>eve dönüş</em></li>
+        </ol>
+
+        <dl class="legs">
+          {% for label, f in [('Gidiş', o), ('Dönüş', i)] %}
+          {% if loop.last and t.ground %}
+          <div class="leg"><dt>Yol</dt><dd>{{ city(t.ground.from_city) }}–{{ city(t.ground.to_city) }}, otobüs ya da tren <span class="muted">(tahmini)</span></dd><dd class="amt num">~{{ money(t.ground_cost) }}</dd></div>
+          {% endif %}
+          <div class="leg">
+            <dt>{{ label }}</dt>
+            <dd>{{ f.origin }}–{{ f.destination }}, {{ airline_name(f.airline) }}{% if f.flight_number %} {{ f.flight_number }}{% endif %}{% if f.transfers %}, {{ f.transfers }} aktarma{% endif %}</dd>
+            <dd class="amt num">{{ money(f.price) }}</dd>
+            <dd class="links">{% for name, url in leg_links(f) %}<a href="{{ url }}" target="_blank" rel="noopener">{{ name }}</a>{% endfor %}</dd>
+          </div>
+          {% endfor %}
+        </dl>
+        {% if t.saving %}<p class="saving">Aynı tarihlerde {{ ablative(city(t.dest_city)) }} dönmek <strong class="num">{{ money(t.saving) }}</strong> daha pahalı olurdu.</p>{% endif %}
+      </article>
+      {% endfor %}
     </div>
     {% endif %}
-  </div>
-  <p class="meta">
-    {{ q.origins|map('city')|join(', ') }} çıkışlı, hedef: {{ region.label }}. {{ res.destinations_scanned }} şehir tarandı.
-    {% if region.note %}{{ region.note }}{% endif %}
-    {% if provider == 'travelpayouts' %}Fiyatlar son 48 saatte görülen fiyatlardır; satın almadan önce linkten kontrol et.{% endif %}
-    {% if provider == 'mock' %}<strong>Şu an deneme verisi gösteriliyor, fiyatlar gerçek değil.</strong>{% endif %}
-  </p>
-  {% for n in res.notes %}<p class="notice">{{ n }}</p>{% endfor %}
 
-  {% if not trips %}
-  <div class="panel empty">
-    <p><strong>Bu ölçütlere uyan gezi çıkmadı.</strong></p>
-    <p class="muted">Tarih aralığını genişlet, gün sayısını esnet ya da başka bir bölge seç. Bütçe koyduysan kaldırıp tekrar dene.</p>
-  </div>
-  {% else %}
-  <ol class="trips" id="trips">
-    {% for v in trips %}{% set t = v.t %}{% set o = t.outbound %}{% set i = t.inbound %}
-    <li class="trip" data-total="{{ v.total }}" data-date="{{ v.date }}" data-days="{{ v.days }}">
-      <div class="trip-head">
-        <div>
-          <h3>{{ city(t.dest_city) }}{% if t.open_jaw %}, dönüş {{ ablative(city(t.return_city)) }}{% endif %}</h3>
-          <p class="when num">{{ day_str(o.depart) }} – {{ day_str(i.depart) }}, {{ t.days }} gün</p>
+    <form class="track card" method="post" action="/takipler">
+      <h3>Bu aramayı takip et</h3>
+      <p class="sm sub">Birkaç saatte bir yeniden ararım. Fiyat hedefinin altına inerse ya da normalinden belirgin ucuzlarsa Telegram'dan haber veririm.</p>
+      {% for k in ('origin', 'date_from', 'date_to', 'min_days', 'max_days', 'max_ground_hours', 'direct', 'same_city') %}{% if form[k] %}<input type="hidden" name="{{ k }}" value="{{ form[k] }}">{% endif %}{% endfor %}
+      {% for t in form.to %}<input type="hidden" name="to" value="{{ t }}">{% endfor %}
+      {% for t in form.not %}<input type="hidden" name="not" value="{{ t }}">{% endfor %}
+      {% for a in form.airlines or [] %}<input type="hidden" name="airlines" value="{{ a }}">{% endfor %}
+      <div class="track-row">
+        <div class="field">
+          <label class="label" for="t-budget">Hedef toplam fiyat</label>
+          <div class="suffix"><input class="input num" type="number" min="0" step="50" id="t-budget" name="budget" value="{{ form.budget or '' }}"
+                 placeholder="{% if trips %}Örn. {{ (trips[0].total * 0.9)|round(-1)|int }}{% else %}İsteğe bağlı{% endif %}"><span>₺</span></div>
         </div>
-        <p class="price num">{{ money(t.total) }}<small>{% if t.verified %}canlı fiyat{% elif t.ground %}yol tahmini dahil{% else %}gidiş-dönüş{% endif %}</small></p>
-      </div>
-
-      <ol class="route{% if t.ground %} route-open{% endif %}" aria-label="Rota">
-        <li class="stop stop-home"><b>{{ city(o.origin_city) }}</b><span class="num">{{ short_day(o.depart) }}{% if o.depart_time %} {{ o.depart_time }}{% endif %}</span></li>
-        <li class="seg"><span>uçak{% if o.transfers %}, {{ o.transfers }} aktarma{% endif %}</span></li>
-        {% if t.ground %}
-        <li class="stop"><b>{{ city(t.dest_city) }}</b><span>gezi başlar</span></li>
-        <li class="seg seg-ground"><span>otobüs/tren ~{{ t.ground.hours|round(1) }} sa</span></li>
-        <li class="stop"><b>{{ city(t.return_city) }}</b><span class="num">{{ short_day(i.depart) }}{% if i.depart_time %} {{ i.depart_time }}{% endif %}</span></li>
-        {% else %}
-        <li class="stop"><b>{{ city(t.dest_city) }}</b><span class="num">{{ t.days }} gün, {{ short_day(i.depart) }}{% if i.depart_time %} {{ i.depart_time }}{% endif %}</span></li>
-        {% endif %}
-        <li class="seg"><span>uçak{% if i.transfers %}, {{ i.transfers }} aktarma{% endif %}</span></li>
-        <li class="stop stop-home"><b>{{ city(i.destination_city) }}</b><span>eve dönüş</span></li>
-      </ol>
-
-      <dl class="legs">
-        {% for label, f in [('Gidiş', o), ('Dönüş', i)] %}
-        <div class="leg">
-          <dt>{{ label }}</dt>
-          <dd>{{ f.origin }}–{{ f.destination }}, {{ airline_name(f.airline) }}{% if f.flight_number %} {{ f.flight_number }}{% endif %}</dd>
-          <dd class="amount num">{{ money(f.price) }}</dd>
-          <dd class="links"><span class="muted">Bilete bak:</span>{% for name, url in leg_links(f) %}<a href="{{ url }}" target="_blank" rel="noopener">{{ name }}</a>{% endfor %}</dd>
-        </div>
-        {% if loop.first and t.ground %}
-        <div class="leg">
-          <dt>Yol</dt>
-          <dd>{{ city(t.ground.from_city) }}–{{ city(t.ground.to_city) }}, otobüs ya da tren <span class="estimate">(tahmini)</span></dd>
-          <dd class="amount num">~{{ money(t.ground_cost) }}</dd>
-        </div>
-        {% endif %}
-        {% endfor %}
-      </dl>
-      {% if t.saving %}
-      <p class="saving">Aynı tarihlerde {{ ablative(city(t.dest_city)) }} dönmek <strong class="num">{{ money(t.saving) }}</strong> daha pahalı olurdu.</p>
-      {% endif %}
-    </li>
-    {% endfor %}
-  </ol>
-  {% endif %}
-
-  <form class="track panel" method="post" action="/takipler">
-    <h2>Bu aramayı takip et</h2>
-    <p class="muted">Birkaç saatte bir yeniden ararım. Fiyat hedefinin altına inerse ya da normalinden belirgin ucuzlarsa Telegram'dan yazarım.</p>
-    {% for k, val in form.items() %}{% if k not in ('budget', 'airlines', 'name') and val %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endif %}{% endfor %}
-    {% for a in form.airlines or [] %}<input type="hidden" name="airlines" value="{{ a }}">{% endfor %}
-    <div class="track-row">
-      <div class="field">
-        <label for="t-budget">Hedef toplam fiyat</label>
-        <input class="input num" type="number" min="0" step="50" id="t-budget" name="budget" value="{{ form.budget }}"
-               placeholder="{% if trips %}örn. {{ (trips[0].total * 0.9)|round(-1)|int }}{% else %}opsiyonel{% endif %}">
+        <button class="btn btn-ghost">Takibe al</button>
       </div>
       <label class="check"><input type="checkbox" name="rolling" checked> Tarihler kendiliğinden ilerlesin (hep önümüzdeki 60 gün)</label>
-      <button class="btn btn-quiet">Takibe al</button>
-    </div>
-  </form>
-</section>
-{% endif %}
+    </form>
+    {% endif %}
+  </section>
+</div>
 {% endblock %}
 
 {% block script %}
 <script>
 (function () {
-  var form = document.getElementById('search');
-  var note = document.getElementById('region-note');
-  function showNote() {
-    var c = form.querySelector('input[name=region]:checked');
-    note.textContent = c ? c.dataset.note : '';
+  var X = '<svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.6"><path d="M1 1l8 8M9 1l-8 8"/></svg>';
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  // --- hedef / hariç belirteç alanları ---
+  function TokenField(box) {
+    var name = box.dataset.name, input = box.querySelector('input[type=text]'), list = box.querySelector('.suggest');
+    var items = [], active = -1, timer = null;
+    function values() { return Array.prototype.map.call(box.querySelectorAll('input[type=hidden]'), function (i) { return i.value; }); }
+    function add(id, label) {
+      if (values().indexOf(id) !== -1) { input.value = ''; close(); return; }
+      var chip = document.createElement('span'); chip.className = 'chip';
+      chip.innerHTML = esc(label) + '<input type="hidden" name="' + name + '" value="' + esc(id) + '"><button type="button" aria-label="' + esc(label) + ' kaldır">' + X + '</button>';
+      box.insertBefore(chip, input); input.value = ''; if (name === 'to') input.placeholder = 'Ekle'; close(); syncQuick();
+    }
+    function close() { list.hidden = true; input.setAttribute('aria-expanded', 'false'); active = -1; }
+    function render() {
+      list.innerHTML = items.map(function (it, i) {
+        return '<li role="option" id="' + name + '-o' + i + '" aria-selected="' + (i === active) + '"><span>' + esc(it.label) +
+               (it.sub ? ' <span class="k">' + esc(it.sub) + '</span>' : '') + '</span><span class="k">' + esc(it.kind) + '</span></li>';
+      }).join('');
+      list.hidden = !items.length; input.setAttribute('aria-expanded', String(!!items.length));
+      if (active >= 0) input.setAttribute('aria-activedescendant', name + '-o' + active);
+    }
+    input.addEventListener('input', function () {
+      clearTimeout(timer); var q = input.value.trim();
+      if (!q) { items = []; render(); return; }
+      timer = setTimeout(function () {
+        fetch('/api/yerler?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+          .then(function (r) { return r.ok ? r.json() : []; })
+          .then(function (d) { items = d; active = d.length ? 0 : -1; render(); });
+      }, 120);
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' && items.length) { active = (active + 1) % items.length; render(); e.preventDefault(); }
+      else if (e.key === 'ArrowUp' && items.length) { active = (active - 1 + items.length) % items.length; render(); e.preventDefault(); }
+      else if (e.key === 'Enter') { if (!list.hidden && active >= 0) { add(items[active].id, items[active].label); e.preventDefault(); } else if (input.value) e.preventDefault(); }
+      else if (e.key === 'Escape') close();
+      else if (e.key === 'Backspace' && !input.value) { var c = box.querySelectorAll('.chip'); if (c.length) { c[c.length - 1].remove(); syncQuick(); } }
+    });
+    list.addEventListener('mousedown', function (e) {
+      var li = e.target.closest('li'); if (!li) return; e.preventDefault();
+      var it = items[Array.prototype.indexOf.call(list.children, li)]; add(it.id, it.label);
+    });
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('.chip button'); if (b) { b.parentNode.remove(); syncQuick(); input.focus(); return; }
+      if (e.target === box) input.focus();
+    });
+    input.addEventListener('blur', function () { setTimeout(close, 120); });
+    return { add: add, values: values };
   }
-  form.addEventListener('change', function (e) { if (e.target.name === 'region') showNote(); });
-  showNote();
-  form.addEventListener('submit', function () {
-    var b = document.getElementById('go');
-    b.disabled = true; b.textContent = 'Aranıyor…';
-    document.getElementById('wait').hidden = false;
+  var fields = {};
+  document.querySelectorAll('.tokens').forEach(function (b) { fields[b.dataset.name] = TokenField(b); });
+
+  // hızlı bölge düğmeleri: basınca ekle, tekrar basınca kaldır
+  function syncQuick() {
+    var v = fields.to ? fields.to.values() : [];
+    document.querySelectorAll('[data-add]').forEach(function (b) { b.setAttribute('aria-pressed', String(v.indexOf(b.dataset.add) !== -1)); });
+  }
+  document.querySelectorAll('[data-add]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var box = document.querySelector('.tokens[data-name=to]');
+      var ex = box.querySelector('input[type=hidden][value="' + b.dataset.add + '"]');
+      if (ex) { ex.parentNode.remove(); syncQuick(); } else fields.to.add(b.dataset.add, b.dataset.label);
+    });
   });
-  // geri tuşuyla dönüldüğünde düğmeyi eski haline getir
-  window.addEventListener('pageshow', function () {
-    var b = document.getElementById('go'); b.disabled = false; b.textContent = 'Gezi bul';
-    document.getElementById('wait').hidden = true;
+  syncQuick();
+
+  // kalış süresi kısayolları
+  var minI = document.getElementById('min_days'), maxI = document.getElementById('max_days');
+  function syncStay() { document.querySelectorAll('#stay .preset').forEach(function (p) { p.setAttribute('aria-pressed', String(p.dataset.min === minI.value && p.dataset.max === maxI.value)); }); }
+  document.querySelectorAll('#stay .preset').forEach(function (p) {
+    p.addEventListener('click', function () { minI.value = p.dataset.min; maxI.value = p.dataset.max; syncStay(); });
+  });
+  minI.addEventListener('input', syncStay); maxI.addEventListener('input', syncStay);
+
+  // gönderirken yükleniyor durumu
+  var form = document.getElementById('search'), go = document.getElementById('go');
+  form.addEventListener('submit', function () {
+    go.disabled = true; go.innerHTML = '<span class="spinner" aria-hidden="true"></span>Uçuşlar taranıyor…';
+  });
+  window.addEventListener('pageshow', function () { go.disabled = false; go.textContent = 'Gezi bul'; });
+
+  // dar ekranda sonuç varken arama paneli kapalı başlasın
+  var panel = document.getElementById('panel');
+  var narrow = window.matchMedia('(max-width: 1023px)');
+  if (document.querySelector('.has-results') && narrow.matches) panel.removeAttribute('open');
+  panel.querySelector('summary').addEventListener('click', function (e) {
+    if (!narrow.matches || !document.querySelector('.has-results')) e.preventDefault();
   });
 
+  // sıralama
   var list = document.getElementById('trips');
-  document.querySelectorAll('.sort button').forEach(function (btn) {
+  document.querySelectorAll('[data-sort]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      var key = btn.dataset.sort;
-      var items = Array.prototype.slice.call(list.children);
-      items.sort(function (a, b) {
-        var x = a.dataset[key], y = b.dataset[key];
-        return key === 'date' ? x.localeCompare(y) : parseFloat(x) - parseFloat(y);
-      });
-      items.forEach(function (li) { list.appendChild(li); });
-      document.querySelectorAll('.sort button').forEach(function (o) { o.setAttribute('aria-pressed', o === btn); });
+      var key = btn.dataset.sort, items = Array.prototype.slice.call(list.children);
+      items.sort(function (a, b) { var x = a.dataset[key], y = b.dataset[key]; return key === 'date' ? x.localeCompare(y) : parseFloat(x) - parseFloat(y); });
+      items.forEach(function (el) { el.style.animation = 'none'; list.appendChild(el); });
+      document.querySelectorAll('[data-sort]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === btn)); });
     });
   });
 })();
