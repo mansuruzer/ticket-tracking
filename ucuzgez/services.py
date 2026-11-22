@@ -38,7 +38,9 @@ class Services:
             near = self.airports.cities_near_point(user["home_lat"], user["home_lon"],
                                                    user["home_radius_km"] or 150)
             if near:
-                return [c for c, _ in near[:3]]
+                # büyük havalimanları öncelikli; yakında hiç yoksa en yakın küçükler
+                big = [c for c, _ in near if c in self.airports.popular]
+                return (big or [c for c, _ in near])[:3]
         if user["home_code"]:
             return [self.airports.city_of(user["home_code"])]
         return []

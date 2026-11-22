@@ -160,7 +160,8 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
             return RedirectResponse("/ayarlar?kaydedildi=1", status_code=303)
         near = []
         if u["home_lat"] is not None:
-            near = ap.cities_near_point(u["home_lat"], u["home_lon"], u["home_radius_km"] or 150)[:3]
+            dist = dict(ap.cities_near_point(u["home_lat"], u["home_lon"], u["home_radius_km"] or 150))
+            near = [(c, dist[c]) for c in svc.home_origins(u) if c in dist]
         return render(request, "settings.html", user=u, page="ayar", origins=svc.home_origins(u), near=near,
                       saved=request.query_params.get("kaydedildi") == "1")
 

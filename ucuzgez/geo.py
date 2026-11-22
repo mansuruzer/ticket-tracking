@@ -31,7 +31,9 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 class AirportDB:
-    def __init__(self, airports: list[Airport]):
+    def __init__(self, airports: list[Airport], popular: set[str] | None = None):
+        # popüler şehirler: elle seçilmiş liste (airports_seed.json). Dönüş şehri seçiminde öncelikli.
+        self.popular: set[str] = popular if popular is not None else {a.city_code for a in airports}
         self.by_code: dict[str, Airport] = {}
         self.by_city: dict[str, list[Airport]] = {}
         for a in airports:
@@ -47,11 +49,14 @@ class AirportDB:
     @classmethod
     def load(cls) -> "AirportDB":
         rows: dict[str, Airport] = {}
+        popular: set[str] = set()
         for f in (FULL_FILE, SEED_FILE):          # seed en son -> Türkçe isimler kazanır
             if f.exists():
                 for r in json.loads(f.read_text(encoding="utf-8"))["airports"]:
                     rows[r[0]] = Airport(r[0], r[1], r[2], r[3], float(r[4]), float(r[5]))
-        return cls(list(rows.values()))
+                    if f == SEED_FILE:
+                        popular.add(r[1])
+        return cls(list(rows.values()), popular)
 
     # ---- sorgular ------------------------------------------------------
     def city_of(self, code: str) -> str:

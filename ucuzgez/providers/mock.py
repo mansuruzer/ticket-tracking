@@ -46,7 +46,7 @@ class MockProvider:
         o = self.airports.city_of(origin)
         y, m = map(int, month.split("-"))
         day = date(y, m, 1)
-        dests = [self.airports.city_of(destination)] if destination else list(self.airports.by_city)
+        dests = [self.airports.city_of(destination)] if destination else sorted(self.airports.popular)
         out = []
         while day.month == m:
             for d in dests:

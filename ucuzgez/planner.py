@@ -176,6 +176,8 @@ class Planner:
                     g = self.ground.estimate(D, R)
                     if g and g.hours <= q.max_ground_hours:
                         near.append((R, g))
+                # önce bilinen büyük şehirler, sonra yakınlık (küçük bölgesel havalimanları sona)
+                near.sort(key=lambda x: (x[0] not in self.airports.popular, x[1].hours))
                 options += near[:10]
             ins_D = inbound(D)
             for R, g in options:
