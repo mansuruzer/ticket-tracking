@@ -289,13 +289,13 @@
     <div class="card empty">
       <h2>Nereye gitsek?</h2>
       <p>Tarih aralığını ve kaç gün kalmak istediğini seç. Hedefi boş bırakırsan en ucuz yerleri ben bulurum. Bir şehre gidip yakındaki başka bir şehirden dönmek daha ucuzsa onu da gösteririm.</p>
-      {% if origins %}
+      {% set o = ('&origin=' ~ form.origin) if form.origin else '' %}
       <div class="ideas">
-        <a class="idea t-mint" href="/ara?min_days=2&max_days=3&to=r:vizesiz"><svg class="ic"><use href="#i-spark"/></svg><b>Vizesiz hafta sonu</b><span>2–3 gün, önümüzdeki 45 gün</span></a>
-        <a class="idea t-lav" href="/ara?min_days=3&max_days=5&to=r:schengen"><svg class="ic"><use href="#i-plane"/></svg><b>Schengen kaçamağı</b><span>3–5 gün, vizen varsa</span></a>
-        <a class="idea t-peach" href="/ara?min_days=5&max_days=8&to=r:balkanlar"><svg class="ic"><use href="#i-bus"/></svg><b>Bir hafta Balkanlar</b><span>5–8 gün, otobüsle şehir değiştirerek</span></a>
+        <a class="idea t-mint" href="/ara?min_days=2&max_days=3&to=r:vizesiz{{ o }}"><svg class="ic"><use href="#i-spark"/></svg><b>Vizesiz hafta sonu</b><span>2–3 gün, önümüzdeki 45 gün</span></a>
+        <a class="idea t-lav" href="/ara?min_days=3&max_days=5&to=r:schengen{{ o }}"><svg class="ic"><use href="#i-plane"/></svg><b>Schengen kaçamağı</b><span>3–5 gün, vizen varsa</span></a>
+        <a class="idea t-peach" href="/ara?min_days=5&max_days=8&to=r:balkanlar{{ o }}"><svg class="ic"><use href="#i-bus"/></svg><b>Bir hafta Balkanlar</b><span>5–8 gün, otobüsle şehir değiştirerek</span></a>
       </div>
-      {% else %}
+      {% if not origins %}
       <p class="sm" style="margin-top:var(--s3)"><a href="/ayarlar">Konumunu kaydet</a>, kalkış yerini her seferinde yazmana gerek kalmasın.</p>
       {% endif %}
     </div>
@@ -431,6 +431,7 @@
     </div>
     {% endif %}
 
+    {% if track %}
     <form class="track card" method="post" action="/takipler">
       <h3><svg class="ic" style="color:var(--brand)"><use href="#i-bell"/></svg>Bu aramayı takip et</h3>
       <p class="sm sub">Birkaç saatte bir yeniden ararım. Fiyat hedefinin altına inerse ya da normalinden belirgin ucuzlarsa Telegram'dan haber veririm.</p>
@@ -448,6 +449,7 @@
       </div>
       <label class="switch">Tarihler kendiliğinden ilerlesin (hep önümüzdeki 60 gün)<input type="checkbox" name="rolling" checked></label>
     </form>
+    {% endif %}
     {% endif %}
   </section>
 </div>

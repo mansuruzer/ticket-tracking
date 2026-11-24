@@ -52,6 +52,8 @@ pytest -q
 
 ## Web arayüzü
 
+Site herkese açık: linki olan herkes giriş yapmadan arama yapar. Arama motorlarına kapalıdır (noindex, robots.txt). Ziyaretçi konum kaydederse ayarı o tarayıcıda saklanır. Takipler ve Telegram bildirimleri yalnız yönetici ya da Telegram'ı bağlı hesap içindir; bu hesap yeni bir cihazda /giris?t=KOD linkiyle açılır.
+
 Pastel renkli, Apple çizgisinde bir arayüz. Koyu modu cihazın ayarına göre kendiliğinden açar; telefonda alt sekme çubuğu çıkar.
 
 - Fiyat takvimi: Arama sonuçlarında her gidiş gününe o gün çıkılırsa bulunan en ucuz gezi yazılır. Ucuz günler nane, pahalı günler şeftali tonundadır. Bir güne dokununca yalnız o günün gezileri listelenir.

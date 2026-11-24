@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#F6F5FB" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111017" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -177,7 +178,7 @@
     .top .seg { display: none; }
     .who .name { display: none; }
     main { padding: var(--s2) var(--s2) calc(var(--s6) + 34px + env(safe-area-inset-bottom)); }
-    .tabbar { display: grid; grid-template-columns: repeat(3, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    .tabbar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
               padding: 6px var(--s2) max(6px, env(safe-area-inset-bottom)); background: var(--bar); border-top: .5px solid var(--sep);
               -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
     .tabbar a { display: grid; justify-items: center; gap: 2px; padding: 4px 0; font-size: 10.5px; font-weight: 500; color: var(--muted); text-decoration: none; }
@@ -212,10 +213,10 @@
   {% if user %}
   <nav class="seg" aria-label="Bölümler">
     <a href="/" {% if page == 'ara' %}aria-current="page"{% endif %}>Ara</a>
-    <a href="/takipler" {% if page == 'takip' %}aria-current="page"{% endif %}>Takiplerim</a>
+    {% if track %}<a href="/takipler" {% if page == 'takip' %}aria-current="page"{% endif %}>Takiplerim</a>{% endif %}
     <a href="/ayarlar" {% if page == 'ayar' %}aria-current="page"{% endif %}>Ayarlar</a>
   </nav>
-  <div class="who"><span class="name">{{ user.name }}</span><a href="/ayarlar" class="avatar" aria-label="Hesabım">{{ (user.name or '?')[:1]|upper }}</a></div>
+  {% if not guest %}<div class="who"><span class="name">{{ user.name }}</span><a href="/ayarlar" class="avatar" aria-label="Hesabım">{{ (user.name or '?')[:1]|upper }}</a></div>{% else %}<span></span>{% endif %}
   {% else %}<span></span><span></span>{% endif %}
 </header>
 </div>
@@ -223,7 +224,7 @@
 {% if user %}
 <nav class="tabbar" aria-label="Bölümler">
   <a href="/" {% if page == 'ara' %}aria-current="page"{% endif %}><svg class="ic"><use href="#i-search"/></svg>Ara</a>
-  <a href="/takipler" {% if page == 'takip' %}aria-current="page"{% endif %}><svg class="ic"><use href="#i-bell"/></svg>Takipler</a>
+  {% if track %}<a href="/takipler" {% if page == 'takip' %}aria-current="page"{% endif %}><svg class="ic"><use href="#i-bell"/></svg>Takipler</a>{% endif %}
   <a href="/ayarlar" {% if page == 'ayar' %}aria-current="page"{% endif %}><svg class="ic"><use href="#i-gear"/></svg>Ayarlar</a>
 </nav>
 {% endif %}

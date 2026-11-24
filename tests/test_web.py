@@ -16,7 +16,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("UG_PROVIDER", "mock")
     monkeypatch.setenv("UG_CURRENCY", "try")
     svc = Services(load_settings())
-    u = svc.db.add_user("Deneme")
+    u = svc.db.add_user("Deneme", is_admin=True)
     svc.db.set_home(u["id"], code="IST")
     c = TestClient(create_web_app(svc))
     c.cookies.set("ug_t", u["token"])
@@ -91,7 +91,8 @@ def test_pages_render(env):
     for path in ["/", "/takipler", "/ayarlar"]:
         assert c.get(path).status_code == 200
     c.cookies.clear()
-    assert "Giriş linki ya da kod" in c.get("/").text
+    r = c.get("/")
+    assert r.status_code == 200 and 'id="search"' in r.text and "Giriş kodu" not in r.text
 
 
 def test_price_calendar_levels():
@@ -127,3 +128,38 @@ def test_login_rejects_wrong_code(env):
     c.cookies.clear()
     for bad in ["", "yanlis", "/start 00000000", "https://x/giris?t=yok"]:
         assert c.post("/giris", data={"token": bad}, follow_redirects=False).status_code == 401
+
+
+def test_anyone_can_search_without_login(env):
+    svc, _, c = env
+    c.cookies.clear()
+    n = len(svc.db.q("SELECT id FROM users"))
+    a, b = _range()
+    r = c.get(f"/ara?origin=IST&date_from={a}&date_to={b}&min_days=3&max_days=5")
+    assert r.status_code == 200 and "gezi bulundu" in r.text
+    assert "Bu aramayı takip et" not in r.text and "/takipler" not in r.text
+    assert c.get("/api/yerler?q=viyana").json()
+    assert c.get(f"/api/ara?origin=IST&date_from={a}&date_to={b}&min_days=3&max_days=5").status_code == 200
+    assert len(svc.db.q("SELECT id FROM users")) == n          # ziyaret veritabanına kullanıcı yazmaz
+    assert c.get("/takipler", follow_redirects=False).status_code == 303
+    assert 'name="robots" content="noindex' in r.text and "Disallow: /" in c.get("/robots.txt").text
+
+
+def test_guest_settings_create_browser_account(env):
+    svc, _, c = env
+    c.cookies.clear()
+    r = c.post("/ayarlar", data={"home_code": "SAW", "radius": "150"}, follow_redirects=False)
+    assert r.status_code == 303 and r.cookies.get("ug_t")
+    g = svc.db.user_by_token(r.cookies.get("ug_t"))
+    assert g["name"] == "Misafir" and g["home_code"] == "SAW" and not g["is_admin"]
+    c.cookies.set("ug_t", g["token"])
+    page = c.get("/ayarlar").text
+    assert "Telegram" not in page and "bu tarayıcıda saklanır" in page
+    assert 'value=""' in c.get("/").text.split('id="origin"')[1][:80]   # kayıtlı kalkış kullanılır
+
+
+def test_admin_keeps_tracking_and_telegram(env):
+    _, _, c = env
+    a, b = _range()
+    assert "Bu aramayı takip et" in c.get(f"/ara?origin=IST&date_from={a}&date_to={b}&min_days=3&max_days=5").text
+    assert "Telegram" in c.get("/ayarlar").text and 'href="/takipler"' in c.get("/").text

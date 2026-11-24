@@ -116,12 +116,27 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
         u = svc.db.user_by_token(tok)
         return u if u and secrets.compare_digest(u["token"], tok) else None
 
+    # Site herkese açık: linki olan herkes arama yapar. Girişsiz ziyaretçi ANON'dur ve veritabanına
+    # yazılmaz; ayar kaydedince bu tarayıcı için bir misafir hesabı açılır. Takip ve Telegram yalnız
+    # yönetici ya da Telegram'ı bağlı kullanıcı içindir.
+    ANON = {"id": None, "name": "Misafir", "token": "", "tg_invite": "", "tg_chat_id": None, "home_lat": None,
+            "home_lon": None, "home_radius_km": 150, "home_code": None, "is_admin": 0}
+
+    def viewer(request: Request):
+        return current_user(request) or ANON
+
+    def can_track(u) -> bool:
+        return u is not None and u is not ANON and bool(u["is_admin"] or u["tg_chat_id"])
+
     def render(request, name, status=200, **ctx):
+        u = ctx.get("user")
+        ctx.setdefault("track", can_track(u))
+        ctx.setdefault("guest", u is None or u is ANON)
         return TEMPLATES.TemplateResponse(request, name, ctx, status_code=status)
 
     def defaults(user) -> dict:
         t = date.today()
-        return {"origin": "", "date_from": (t + timedelta(days=1)).isoformat(),
+        return {"origin": "" if user and svc.home_origins(user) else "IST", "date_from": (t + timedelta(days=1)).isoformat(),
                 "date_to": (t + timedelta(days=45)).isoformat(), "min_days": "3", "max_days": "5",
                 "to": [], "not": [], "budget": "", "max_ground_hours": "6", "airlines": []}
 
@@ -166,9 +181,7 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
 
     # ---- sayfalar ----------------------------------------------------------------
     async def index(request: Request):
-        u = current_user(request)
-        if not u:
-            return render(request, "login.html")
+        u = viewer(request)
         return render(request, "index.html", user=u, page="ara", form=defaults(u),
                       origins=svc.home_origins(u), res=None, q=None, error=None)
 
@@ -177,9 +190,7 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
                     error=None, trips=[], **kw)
 
     async def search(request: Request):
-        u = current_user(request)
-        if not u:
-            return RedirectResponse("/", status_code=303)
+        u = viewer(request)
         f = request.query_params if request.method == "GET" else await request.form()
         inc, exc = targets_from(f)
         form = {**defaults(u), **{k: f.get(k) for k in f.keys()}, "to": inc, "not": exc,
@@ -200,13 +211,11 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
         return render(request, "index.html", **ctx)
 
     async def api_places(request: Request):
-        if not current_user(request):
-            return JSONResponse([], status_code=401)
         return JSONResponse(places.search(request.query_params.get("q", "")))
 
     async def watches(request: Request):
         u = current_user(request)
-        if not u:
+        if not can_track(u):
             return RedirectResponse("/", status_code=303)
         if request.method == "POST":
             f = await request.form()
@@ -271,11 +280,13 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
         return RedirectResponse("/takipler", status_code=303)
 
     async def settings_page(request: Request):
-        u = current_user(request)
-        if not u:
-            return RedirectResponse("/", status_code=303)
+        u = viewer(request)
         if request.method == "POST":
             f = await request.form()
+            new_cookie = None
+            if u is ANON:                     # ilk kayıtta bu tarayıcıya misafir hesabı aç
+                u = svc.db.add_user("Misafir")
+                new_cookie = u["token"]
             lat, lon = f.get("lat"), f.get("lon")
             svc.db.set_home(u["id"],
                             lat=float(lat) if lat else None, lon=float(lon) if lon else None,
@@ -284,7 +295,10 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
             if f.get("clear_location") == "1":
                 with svc.db.tx() as c:
                     c.execute("UPDATE users SET home_lat=NULL, home_lon=NULL WHERE id=?", (u["id"],))
-            return RedirectResponse("/ayarlar?kaydedildi=1", status_code=303)
+            r = RedirectResponse("/ayarlar?kaydedildi=1", status_code=303)
+            if new_cookie:
+                r.set_cookie(COOKIE, new_cookie, max_age=365 * 86400, httponly=True, samesite="lax")
+            return r
         near = []
         if u["home_lat"] is not None:
             dist = dict(ap.cities_near_point(u["home_lat"], u["home_lon"], u["home_radius_km"] or 150))
@@ -328,9 +342,7 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
 
     # ---- JSON API -------------------------------------------------------------------
     async def api_search(request: Request):
-        u = current_user(request)
-        if not u:
-            return JSONResponse({"error": "yetkisiz"}, status_code=401)
+        u = viewer(request)
         try:
             q, _ = form_query(u, request.query_params)
         except ValueError as e:
@@ -348,6 +360,9 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
 
     async def health(_):
         return Response("ok")
+
+    async def robots(_):                      # link herkese açık ama arama motorlarında görünmesin
+        return Response("User-agent: *\nDisallow: /\n", media_type="text/plain")
 
     # ---- ana ekrana ekle (PWA) -------------------------------------------------------
     async def manifest(_):
@@ -385,6 +400,7 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
         Route("/api/ara", api_search),
         Route("/api/yerler", api_places),
         Route("/saglik", health),
+        Route("/robots.txt", robots),
         Route("/manifest.webmanifest", manifest),
         Route("/icon.svg", static_file("icon.svg", "image/svg+xml")),
         Route("/icon-180.png", static_file("icon-180.png", "image/png")),

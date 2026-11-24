@@ -58,6 +58,7 @@
   </div>
   </section>
 
+  {% if track %}
   <section>
   <p class="group-title">Bildirimler</p>
   <div class="card box">
@@ -73,6 +74,7 @@
     <p class="sm sub">Botta tüm komutları görmek için <code>/yardim</code> yaz.</p>
   </div>
   </section>
+  {% endif %}
 
   <section>
   <p class="group-title">Uygulama</p>
@@ -82,7 +84,8 @@
       <div><h2>Ana ekrana ekle</h2><p>UcuzGez'i telefonunda uygulama gibi açabilirsin.</p></div>
     </div>
     <p class="install">iPhone'da Safari'de Paylaş düğmesine, sonra "Ana Ekrana Ekle"ye dokun. Android'de Chrome menüsünden "Ana ekrana ekle"yi seç.</p>
-    <div class="row"><a class="btn btn-plain btn-sm" href="/cikis">Çıkış yap</a></div>
+    {% if guest or not track %}<p class="xs sub">Ayarların bu tarayıcıda saklanır; giriş yapmana gerek yok.</p>
+    {% else %}<div class="row"><a class="btn btn-plain btn-sm" href="/cikis">Çıkış yap</a></div>{% endif %}
   </div>
   </section>
 </div>
