@@ -103,6 +103,7 @@ class PlanResult:
     cache_hits: int
     destinations_scanned: int
     notes: list[str] = field(default_factory=list)
+    daily: dict[date, tuple[float, str]] = field(default_factory=dict)   # gidiş günü -> (en ucuz toplam, şehir)
 
 
 class Planner:
@@ -202,6 +203,9 @@ class Planner:
         # 5) sırala + çeşitlendir
         all_trips.sort(key=lambda t: t.total)
         chosen = self._diversify(all_trips, q)
+        daily: dict[date, tuple[float, str]] = {}
+        for t in all_trips:                      # fiyat takvimi: her gidiş günü için en ucuz gezi
+            daily.setdefault(t.outbound.depart, (t.total, t.dest_city))
 
         # 6) canlı doğrulama
         if self.verifiers and self.verify_top_n and chosen:
@@ -212,7 +216,7 @@ class Planner:
         if q.budget and not chosen and all_trips:
             notes.append(f"Bütçe altında sonuç yok; bulunan en ucuz: {all_trips[0].total:.0f}")
         return PlanResult(chosen, self.search.api_calls - calls0, self.search.cache_hits - hits0,
-                          len(candidates), notes)
+                          len(candidates), notes, dict(sorted(daily.items())))
 
     def _country_ok(self, city: str, q: TripQuery) -> bool:
         """Şehir seçilen hedeflere uyuyor mu? (dahil: ülke VEYA şehir; sonra hariçler)"""

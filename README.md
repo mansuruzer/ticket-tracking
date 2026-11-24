@@ -1,4 +1,4 @@
-# ✈️ UcuzGez: kişisel ucuz bilet ve esnek gezi bulucu
+# UcuzGez: kişisel ucuz bilet ve esnek gezi bulucu
 
 En fazla 50 kişilik kapalı bir grup için yazılmış, ticari olmayan bir araç. Ne yapıyor:
 
@@ -50,6 +50,18 @@ pytest -q
 2. **Telegram:** @BotFather → `/newbot` → token → `TELEGRAM_BOT_TOKEN`
 3. (Opsiyonel) Dünyadaki bütün havalimanlarını indir: `python -m ucuzgez.cli update-airports` (yerleşik liste Türkiye, Avrupa ve çevresindeki ~95 havalimanı)
 
+## Web arayüzü
+
+Pastel renkli, Apple çizgisinde bir arayüz. Koyu modu cihazın ayarına göre kendiliğinden açar; telefonda alt sekme çubuğu çıkar.
+
+- Fiyat takvimi: Arama sonuçlarında her gidiş gününe o gün çıkılırsa bulunan en ucuz gezi yazılır. Ucuz günler nane, pahalı günler şeftali tonundadır. Bir güne dokununca yalnız o günün gezileri listelenir.
+- Süzgeç ve sıralama: Tek şehir ya da iki şehir gezen, aktarmasız, hafta sonunu kapsayan; en ucuz, en erken, en kısa.
+- Tarih kısayolları: 30 gün, gelecek ay, 2 ay, 3 ay.
+- Takvime ekle: Gezi tarihleri .ics dosyası olarak takvime eklenir (iPhone, Google, Outlook).
+- Paylaş: Arama linki ya da gezi özeti telefonun paylaşım menüsüyle gönderilir; masaüstünde panoya kopyalanır.
+- Takiplerim: Son 30 günün fiyat çizgisi, 30 günün en düşüğü, hedefe inince yeşil gösterim, durdur/sürdür ve "Şimdi ara".
+- Ana ekrana ekle: Uygulama ikonu ve manifest var; telefonda uygulama gibi tam ekran açılır.
+
 ## Telegram komutları
 
 ```
@@ -76,7 +88,7 @@ Bir aramanın maliyeti ≈ 1 + (12 şehir × ~4 dönüş şehri) ay-sorgusu. Son
 
 ---
 
-## ▲ Vercel'de ücretsiz, kartsız, sunucusuz kurulum (önerilen)
+## Vercel'de ücretsiz, kartsız, sunucusuz kurulum (önerilen)
 
 Bu modda arka planda sürekli açık bir süreç gerekmez. Telegram mesajları webhook ile gelir, zamanlayıcı dışarıdan tetiklenir, veriler Turso'da (ücretsiz uzak SQLite) durur. Kullanılan her şey ücretsiz ve kart istemiyor.
 
@@ -104,11 +116,11 @@ Vercel Cron (günde 1, yedek)  ──► /cron           ▼
 
 Notlar: Vercel Hobby'de bir fonksiyon en fazla 300 sn çalışabilir. `/cron` 240 sn'de durur, yarım kalan iş bir sonraki tetiklemede devam eder. Telegram bir mesajı tekrar gönderirse (`update_id`) ikinci kez işlenmez. Vercel Hobby kişisel ve ticari olmayan kullanım içindir; bu proje de öyle.
 
-## 💸 Alternatif: kendi sunucunda 7/24 (Oracle Always Free / ev bilgisayarı)
+## Alternatif: kendi sunucunda 7/24 (Oracle Always Free / ev bilgisayarı)
 
 Bu uygulama sürekli açık bir süreç istiyor (Telegram long-polling + zamanlayıcı). O yüzden "boşta kalınca uyuyan" ücretsiz platformlar uygun değil. Render'ın ücretsiz servisi 15 dakika istek gelmezse uyuyor ve diski kalıcı değil. Bu durumda SQLite verileri yeniden başlatmada kaybolur.
 
-### ✅ Önerilen: Oracle Cloud "Always Free" VM
+### Önerilen: Oracle Cloud "Always Free" VM
 - **Always Free** hesapta süresiz ücretsiz: 2 adet AMD Micro (1/8 OCPU, 1 GB RAM). Yeni hesaplarda ARM A1 kotası 2 OCPU / 12 GB'a indirildi (Haziran 2026). Bu uygulama Micro'da bile rahat çalışır.
 - Kayıtta kredi kartı **doğrulama için** istenir. **Hesabı "Pay As You Go"ya yükseltmezsen** ve sadece "Always Free Eligible" etiketli kaynakları kullanırsan ücret çıkmaz.
 - Dikkat: Oracle, uzun süre neredeyse hiç CPU kullanmayan Always Free makineleri geri alabileceğini (durdurabileceğini) söylüyor. Haftalık yedek al (`deploy/backup.sh`). Makine durdurulursa konsoldan tekrar başlatabilirsin.

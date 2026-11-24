@@ -1,6 +1,7 @@
 """Web arayüzü + JSON API (Starlette). Giriş: kişiye özel link (/giris?t=TOKEN)."""
 from __future__ import annotations
 
+import json
 import secrets
 from datetime import date, timedelta
 from pathlib import Path
@@ -26,6 +27,66 @@ AIRLINE_CHOICES = [("PC", "Pegasus"), ("VF", "AJet"), ("TK", "THY"), ("W6", "Wiz
                    ("FR", "Ryanair"), ("U2", "easyJet"), ("XQ", "SunExpress")]
 QUICK_REGIONS = ["vizesiz", "schengen", "balkanlar", "kafkasya", "ortadogu", "yurtici", "kolay-vize", "avrupa"]
 STAY_PRESETS = [("2", "3", "Hafta sonu"), ("3", "5", "3–5 gün"), ("5", "8", "Bir hafta"), ("9", "14", "Uzun")]
+DATE_PRESETS = [("30", "30 gün"), ("next", "Gelecek ay"), ("60", "2 ay"), ("90", "3 ay")]
+TINTS = ["lav", "mint", "peach", "sky", "butter", "rose"]
+TR_MONTHS_LONG = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim",
+                  "Kasım", "Aralık"]
+STATIC = Path(__file__).parent / "static"
+
+
+def tint(key: str) -> str:
+    """Şehre göre sabit pastel ton (her şehir hep aynı renkte görünsün)."""
+    return TINTS[sum(map(ord, key or "")) % len(TINTS)]
+
+
+def price_calendar(daily: dict, d1: date, d2: date) -> list[dict]:
+    """Gidiş penceresini ay ay takvim haftalarına böler; her güne 0-4 arası ucuzluk seviyesi verir."""
+    if not daily:
+        return []
+    prices = sorted(p for p, _ in daily.values())
+    lo, hi = prices[0], prices[-1]
+
+    def level(p: float) -> int:
+        return 0 if hi == lo else min(4, int((p - lo) / (hi - lo) * 5))
+
+    months, d = [], d1.replace(day=1)
+    while d <= d2:
+        nxt = (d.replace(day=28) + timedelta(days=4)).replace(day=1)
+        cells: list[dict | None] = [None] * d.weekday()
+        day = d
+        while day < nxt:
+            info = daily.get(day)
+            cells.append({"d": day, "in": d1 <= day <= d2, "price": info[0] if info else None,
+                          "city": info[1] if info else None, "lvl": level(info[0]) if info else None,
+                          "best": bool(info) and info[0] == lo})
+            day += timedelta(days=1)
+        cells += [None] * (-len(cells) % 7)
+        if any(c and c["in"] for c in cells):
+            months.append({"label": f"{TR_MONTHS_LONG[d.month - 1]} {d.year}",
+                           "weeks": [cells[i:i + 7] for i in range(0, len(cells), 7)]})
+        d = nxt
+    return months
+
+
+def sparkline(series: list[tuple[float, float]], w: int = 144, h: int = 40) -> dict | None:
+    """Takip fiyat geçmişi için küçük SVG çizgisi."""
+    if len(series) < 2:
+        return None
+    t0, t1 = series[0][0], series[-1][0]
+    ps = [p for _, p in series]
+    lo, hi = min(ps), max(ps)
+    pad = 4
+
+    def xy(t, p):
+        x = pad + (t - t0) / ((t1 - t0) or 1) * (w - 2 * pad)
+        y = pad + (1 - (p - lo) / ((hi - lo) or 1)) * (h - 2 * pad)
+        return round(x, 1), round(y, 1)
+
+    pts = [xy(t, p) for t, p in series]
+    line = "M" + " L".join(f"{x},{y}" for x, y in pts)
+    area = f"{line} L{pts[-1][0]},{h} L{pts[0][0]},{h} Z"
+    return {"line": line, "area": area, "last": pts[-1], "w": w, "h": h, "lo": lo, "hi": hi,
+            "down": ps[-1] <= ps[0]}
 
 
 def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = None) -> Starlette:
@@ -37,7 +98,8 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
         leg_links=leg_links, city=ap.city_name, ablative=ablative, airline_choices=AIRLINE_CHOICES,
         quick_regions=[REGIONS[k] for k in QUICK_REGIONS], stay_presets=STAY_PRESETS, visa_date=VISA_INFO_DATE,
         provider=svc.s.provider, place_label=places.label, place_kind=places.kind_label,
-        describe=places.describe, regions_all=REGIONS,
+        describe=places.describe, regions_all=REGIONS, date_presets=DATE_PRESETS, tint=tint,
+        country=lambda c: places.country_name(ap.country_of(c)),
     )
     TEMPLATES.env.filters["city"] = ap.city_name
 
@@ -127,6 +189,11 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
             return render(request, "index.html", status=400, **{**page_ctx(u, form), "error": str(e)})
         res = await run_in_threadpool(svc.plan, q)
         ctx = page_ctx(u, form)
+        base = [(k, v) for k, v in f.multi_items() if k not in ("date_from", "date_to")]
+        ctx.update(calendar=price_calendar(res.daily, q.date_from, q.date_to),
+                   day_url=lambda d: "/ara?" + urlencode(base + [("date_from", d.isoformat()), ("date_to", d.isoformat())]),
+                   share_url=str(request.url) if request.method == "GET" else "",
+                   single_day=q.date_from == q.date_to)
         ctx.update(res=res, q=q, trips=[trip_view(t) for t in res.trips], where=places.describe(inc, exc),
                    visa_notes=[REGIONS[t[2:]].note for t in inc if t.startswith("r:") and REGIONS[t[2:]].note])
         return render(request, "index.html", **ctx)
@@ -145,7 +212,7 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
             try:
                 q, budget = form_query(u, f)
             except ValueError as e:
-                return render(request, "watches.html", user=u, page="takip", items=svc.db.watches(u["id"]),
+                return render(request, "watches.html", user=u, page="takip", items=watch_items(u),
                               error=str(e), status=400)
             q.budget = None
             rolling = 60 if f.get("rolling") == "on" else None
@@ -158,8 +225,43 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
             params["_targets"] = {"include": inc, "exclude": exc}
             svc.db.add_watch(u["id"], name, params, budget)
             return RedirectResponse("/takipler?eklendi=1", status_code=303)
-        return render(request, "watches.html", user=u, page="takip", items=svc.db.watches(u["id"]),
+        return render(request, "watches.html", user=u, page="takip", items=watch_items(u),
                       added=request.query_params.get("eklendi") == "1", error=None)
+
+    def watch_search_url(params: dict) -> str | None:
+        try:
+            q = svc.params_to_query(params)
+        except Exception:  # noqa: BLE001 - eski/bozuk kayıt: link verme
+            return None
+        tg = params.get("_targets") or {}
+        qs: list[tuple[str, str]] = [("origin", ",".join(q.origins)), ("date_from", q.date_from.isoformat()),
+                                     ("date_to", max(q.date_from, q.date_to).isoformat()),
+                                     ("min_days", str(q.min_days)), ("max_days", str(q.max_days)),
+                                     ("max_ground_hours", f"{q.max_ground_hours:g}")]
+        qs += [("to", t) for t in tg.get("include", [])] + [("not", t) for t in tg.get("exclude", [])]
+        qs += [("airlines", a) for a in sorted(q.airlines or [])]
+        if not q.open_jaw:
+            qs.append(("same_city", "on"))
+        if q.max_transfers == 0:
+            qs.append(("direct", "on"))
+        return "/ara?" + urlencode(qs)
+
+    def watch_items(u) -> list[dict]:
+        out = []
+        for w in svc.db.watches(u["id"]):
+            params = json.loads(w["params"])
+            series = svc.db.watch_series(w["id"])
+            out.append({"w": w, "spark": sparkline(series), "url": watch_search_url(params),
+                        "low": min((p for _, p in series), default=None), "n": len(series),
+                        "rolling": bool(params.get("rolling"))})
+        return out
+
+    async def toggle_watch(request: Request):
+        u = current_user(request)
+        if u:
+            f = await request.form()
+            svc.db.set_watch_active(u["id"], int(request.path_params["wid"]), f.get("active") == "1")
+        return RedirectResponse("/takipler", status_code=303)
 
     async def del_watch(request: Request):
         u = current_user(request)
@@ -228,6 +330,25 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
     async def health(_):
         return Response("ok")
 
+    # ---- ana ekrana ekle (PWA) -------------------------------------------------------
+    async def manifest(_):
+        return JSONResponse({
+            "name": "UcuzGez", "short_name": "UcuzGez", "lang": "tr", "start_url": "/", "scope": "/",
+            "display": "standalone", "background_color": "#F6F5FB", "theme_color": "#F6F5FB",
+            "description": "Esnek tarihli ucuz gezi bulucu",
+            "icons": [{"src": "/icon-180.png", "sizes": "180x180", "type": "image/png"},
+                      {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+                      {"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml"}],
+        }, media_type="application/manifest+json")
+
+    def static_file(name: str, media: str):
+        async def handler(_):
+            p = STATIC / name
+            if not p.exists():
+                return Response(status_code=404)
+            return Response(p.read_bytes(), media_type=media, headers={"Cache-Control": "public, max-age=604800"})
+        return handler
+
     async def legacy_redirect(request: Request):
         return RedirectResponse("/ayarlar" if request.url.path == "/ev" else "/takipler", status_code=307)
 
@@ -236,6 +357,7 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
         Route("/ara", search, methods=["GET", "POST"]),
         Route("/takipler", watches, methods=["GET", "POST"]),
         Route("/takipler/{wid:int}/sil", del_watch, methods=["POST"]),
+        Route("/takipler/{wid:int}/durum", toggle_watch, methods=["POST"]),
         Route("/ayarlar", settings_page, methods=["GET", "POST"]),
         Route("/giris", login, methods=["GET", "POST"]),
         Route("/cikis", logout),
@@ -244,5 +366,9 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
         Route("/api/ara", api_search),
         Route("/api/yerler", api_places),
         Route("/saglik", health),
+        Route("/manifest.webmanifest", manifest),
+        Route("/icon.svg", static_file("icon.svg", "image/svg+xml")),
+        Route("/icon-180.png", static_file("icon-180.png", "image/png")),
+        Route("/icon-512.png", static_file("icon-512.png", "image/png")),
         *(extra_routes or []),
     ], lifespan=lifespan)

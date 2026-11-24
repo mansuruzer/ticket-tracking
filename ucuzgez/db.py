@@ -178,6 +178,16 @@ class DB:
             if best is not None:
                 c.execute("INSERT INTO watch_history VALUES(?,?,?)", (wid, best, time.time()))
 
+    def watch_series(self, wid: int, days: int = 30) -> list[tuple[float, float]]:
+        rows = self.q("SELECT at, price FROM watch_history WHERE watch_id=? AND at>? ORDER BY at",
+                      (wid, time.time() - days * 86400))
+        return [(r["at"], r["price"]) for r in rows]
+
+    def set_watch_active(self, uid: int, wid: int, active: bool) -> bool:
+        with self.tx() as c:
+            return c.execute("UPDATE watches SET active=? WHERE id=? AND user_id=?",
+                             (1 if active else 0, wid, uid)).rowcount > 0
+
     def watch_median(self, wid: int, days: int = 30) -> tuple[float | None, int]:
         rows = self.q("SELECT price FROM watch_history WHERE watch_id=? AND at>?",
                       (wid, time.time() - days * 86400))

@@ -1,34 +1,42 @@
 {% extends "base.html" %}
 {% block title %}Ayarlar – UcuzGez{% endblock %}
 {% block style %}
-  .page { max-width: 760px; margin: 0 auto; padding-top: var(--s3); display: grid; gap: var(--s3); }
-  .page-head h1 { font-size: var(--t-2xl); }
-  .box { padding: var(--s4) var(--s4) var(--s3); display: grid; gap: var(--s3); }
-  .box h2 { font-size: var(--t-lg); letter-spacing: -0.02em; }
-  .box-head p { margin-top: 4px; color: var(--sub); font-size: var(--t-sm); }
+  .page { max-width: 680px; margin: 0 auto; display: grid; gap: var(--s3); }
+  .page-head h1 { font-size: var(--t-2xl); letter-spacing: -0.035em; }
+  .group-title { margin: 0 0 6px var(--s2); font-size: 13px; font-weight: 500; color: var(--sub); text-transform: none; }
+  .box { padding: var(--s3); display: grid; gap: var(--s3); }
+  .box-head { display: grid; grid-template-columns: auto 1fr; gap: var(--s2); align-items: center; }
+  .box-icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; }
+  .box h2 { font-size: var(--t-md); font-weight: 600; letter-spacing: -0.015em; }
+  .box-head p { margin-top: 1px; color: var(--sub); font-size: var(--t-sm); }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
-  .row { display: flex; gap: var(--s2); flex-wrap: wrap; }
+  .row { display: flex; gap: var(--s1); flex-wrap: wrap; }
   .airports { display: flex; flex-wrap: wrap; gap: 6px; }
-  .airports span { padding: 4px 12px; border-radius: var(--r-pill); background: var(--brand-soft); color: var(--brand-hover); font-size: var(--t-sm); font-weight: 600; }
-  code { background: var(--input); border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; font-size: .92em; }
-  @media (max-width: 620px) { .pair { grid-template-columns: 1fr; } .box { padding: var(--s3); } }
+  .airports span { padding: 5px 12px; border-radius: var(--r-pill); background: var(--sky); color: var(--sky-ink); font-size: var(--t-sm); font-weight: 600; }
+  code { white-space: nowrap; background: var(--fill); padding: 3px 8px; border-radius: 7px; font-size: .92em; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .copy { cursor: pointer; }
+  .tg-ok { display: flex; align-items: center; gap: 8px; color: var(--mint-ink); font-weight: 600; }
+  .install { font-size: var(--t-sm); color: var(--sub); }
+  @media (max-width: 620px) { .pair { grid-template-columns: 1fr; } .box { padding: var(--s2) var(--s3) var(--s3); } }
 {% endblock %}
 {% block body %}
 <div class="page">
   <div class="page-head"><h1>Ayarlar</h1></div>
-  {% if saved %}<p class="notice" role="status">Ayarlar kaydedildi.</p>{% endif %}
+  {% if saved %}<p class="notice notice-ok" role="status"><svg class="ic"><use href="#i-check"/></svg>Ayarlar kaydedildi.</p>{% endif %}
 
-  <section class="card box">
+  <section>
+  <p class="group-title">Kalkış</p>
+  <div class="card box">
     <div class="box-head">
-      <h2>Nereden uçuyorsun?</h2>
-      <p>Arama yaparken kalkış alanını boş bırakırsan buradaki bilgiyi kullanırım.</p>
+      <span class="box-icon" style="background:var(--sky);color:var(--sky-ink)"><svg class="ic"><use href="#i-loc"/></svg></span>
+      <div><h2>Nereden uçuyorsun?</h2><p>Arama yaparken kalkış alanını boş bırakırsan buradaki bilgiyi kullanırım.</p></div>
     </div>
     {% if near %}
     <div class="airports">{% for c, km in near %}<span>{{ c|city }}, {{ km|round|int }} km</span>{% endfor %}</div>
     {% elif user.home_lat %}
-    <p class="notice notice-error">Kayıtlı konumunun {{ user.home_radius_km|int }} km yakınında büyük havalimanı yok. Uzaklığı artır.</p>
+    <p class="notice notice-error"><svg class="ic"><use href="#i-info"/></svg>Kayıtlı konumunun {{ user.home_radius_km|int }} km yakınında büyük havalimanı yok. Uzaklığı artır.</p>
     {% endif %}
-    <form method="post" action="/ayarlar" id="home" class="stack" style="display:grid;gap:var(--s3)">
+    <form method="post" action="/ayarlar" id="home" style="display:grid;gap:var(--s3)">
       <input type="hidden" name="lat"><input type="hidden" name="lon">
       <div class="pair">
         <div class="field">
@@ -36,30 +44,46 @@
           <input class="input" id="home_code" name="home_code" value="{{ user.home_code or '' }}" placeholder="IST">
         </div>
         <div class="field">
-          <label class="label" for="radius">Konumdan en fazla uzaklık (km)</label>
-          <input class="input num" type="number" min="20" max="1000" id="radius" name="radius" value="{{ user.home_radius_km|int }}">
+          <label class="label" for="radius">Konumdan en fazla uzaklık</label>
+          <div class="suffix" style="position:relative"><input class="input num" type="number" min="20" max="1000" id="radius" name="radius" value="{{ user.home_radius_km|int }}" style="padding-right:48px"><span style="position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:var(--t-sm)">km</span></div>
         </div>
       </div>
       <div class="row">
         <button class="btn">Kaydet</button>
-        <button type="button" class="btn btn-ghost" id="geo">Konumumu kullan</button>
-        {% if user.home_lat %}<button class="btn btn-ghost" name="clear_location" value="1">Konumu sil</button>{% endif %}
+        <button type="button" class="btn btn-tint" id="geo"><svg class="ic"><use href="#i-loc"/></svg>Konumumu kullan</button>
+        {% if user.home_lat %}<button class="btn btn-plain" name="clear_location" value="1">Konumu sil</button>{% endif %}
       </div>
       <p class="xs sub" id="geo-msg" role="status"></p>
     </form>
+  </div>
   </section>
 
-  <section class="card box">
+  <section>
+  <p class="group-title">Bildirimler</p>
+  <div class="card box">
     <div class="box-head">
-      <h2>Telegram</h2>
-      <p>Fiyat bildirimleri ve hızlı aramalar için.</p>
+      <span class="box-icon" style="background:var(--lav);color:var(--lav-ink)"><svg class="ic"><use href="#i-bell"/></svg></span>
+      <div><h2>Telegram</h2><p>Fiyat bildirimleri ve hızlı aramalar için.</p></div>
     </div>
     {% if user.tg_chat_id %}
-    <p>Telegram hesabın bağlı.</p>
+    <p class="tg-ok"><svg class="ic"><use href="#i-check"/></svg>Telegram hesabın bağlı.</p>
     {% else %}
-    <p>Bağlamak için bota şunu yaz: <code>/start {{ user.tg_invite }}</code></p>
+    <p>Bağlamak için bota şunu yaz: <code class="copy" data-copy="/start {{ user.tg_invite }}" title="Kopyalamak için dokun">/start {{ user.tg_invite }}</code></p>
     {% endif %}
     <p class="sm sub">Botta tüm komutları görmek için <code>/yardim</code> yaz.</p>
+  </div>
+  </section>
+
+  <section>
+  <p class="group-title">Uygulama</p>
+  <div class="card box">
+    <div class="box-head">
+      <span class="box-icon" style="background:var(--peach);color:var(--peach-ink)"><svg class="ic"><use href="#i-plane"/></svg></span>
+      <div><h2>Ana ekrana ekle</h2><p>UcuzGez'i telefonunda uygulama gibi açabilirsin.</p></div>
+    </div>
+    <p class="install">iPhone'da Safari'de Paylaş düğmesine, sonra "Ana Ekrana Ekle"ye dokun. Android'de Chrome menüsünden "Ana ekrana ekle"yi seç.</p>
+    <div class="row"><a class="btn btn-plain btn-sm" href="/cikis">Çıkış yap</a></div>
+  </div>
   </section>
 </div>
 {% endblock %}
@@ -73,6 +97,11 @@ document.getElementById('geo').addEventListener('click', function () {
     var f = document.getElementById('home');
     f.lat.value = p.coords.latitude; f.lon.value = p.coords.longitude; f.submit();
   }, function () { msg.textContent = 'Konum alınamadı. Tarayıcıda konum iznini açıp tekrar dene.'; });
+});
+document.querySelectorAll('[data-copy]').forEach(function (c) {
+  c.addEventListener('click', function () {
+    if (navigator.clipboard) navigator.clipboard.writeText(c.dataset.copy).then(function () { toast('Kopyalandı'); });
+  });
 });
 </script>
 {% endblock %}

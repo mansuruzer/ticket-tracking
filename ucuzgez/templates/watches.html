@@ -1,25 +1,44 @@
 {% extends "base.html" %}
 {% block title %}Takiplerim – UcuzGez{% endblock %}
 {% block style %}
-  .page { max-width: 760px; margin: 0 auto; padding-top: var(--s3); display: grid; gap: var(--s3); }
-  .page-head h1 { font-size: var(--t-2xl); }
+  .page { max-width: 760px; margin: 0 auto; display: grid; gap: var(--s3); }
+  .page-head h1 { font-size: var(--t-2xl); letter-spacing: -0.035em; }
   .page-head p { margin-top: var(--s1); color: var(--sub); max-width: 60ch; }
-  .list { padding: var(--s1) var(--s3); }
-  .watch { display: grid; grid-template-columns: 1fr 89px 89px auto; gap: var(--s2) var(--s3); align-items: center; padding: var(--s3) 0; border-bottom: 1px solid var(--border); }
-  .watch:last-child { border-bottom: 0; }
-  .watch h2 { font-size: var(--t-md); letter-spacing: -0.01em; font-weight: 700; line-height: 1.4; }
-  .watch .when { font-size: var(--t-xs); color: var(--muted); margin-top: 2px; }
-  .stat { text-align: right; }
-  .stat span { display: block; font-size: var(--t-xs); color: var(--muted); }
-  .stat b { font-size: var(--t-md); font-weight: 700; }
-  .paused { display: inline-block; margin-left: var(--s1); padding: 1px 8px; border-radius: var(--r-pill); background: var(--input); color: var(--sub); font-size: var(--t-xs); font-weight: 600; }
+  .list { display: grid; gap: var(--s2); }
+  .watch { padding: var(--s3); display: grid; gap: var(--s2); animation: enter .45s var(--ease) both; }
+  .watch.off { opacity: .72; }
+  .w-top { display: grid; grid-template-columns: auto 1fr; gap: var(--s2); align-items: start; }
+  .w-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--tint); color: var(--ink); }
+  .watch h2 { font-size: var(--t-md); letter-spacing: -0.015em; font-weight: 600; line-height: 1.4; }
+  .watch .when { font-size: var(--t-xs); color: var(--muted); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .pill { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: var(--r-pill); font-size: 11px; font-weight: 600; background: var(--fill); color: var(--sub); }
+  .pill.ok { background: var(--mint); color: var(--mint-ink); }
+  .w-mid { display: grid; grid-template-columns: repeat(3, 1fr) minmax(120px, 1.4fr); gap: var(--s1); align-items: stretch; }
+  .stat { padding: 10px var(--s2); border-radius: var(--r-ctl); background: var(--fill); }
+  .stat span { display: block; font-size: 11px; font-weight: 500; color: var(--sub); }
+  .stat b { font-size: var(--t-md); font-weight: 600; letter-spacing: -0.015em; }
+  .stat.hit { background: var(--mint); } .stat.hit span, .stat.hit b { color: var(--mint-ink); }
+  .spark { position: relative; display: grid; place-items: center; padding: 6px; border-radius: var(--r-ctl); background: var(--fill); color: var(--brand); }
+  .spark svg { width: 100%; height: 40px; overflow: visible; }
+  .spark.down { color: var(--mint-ink); }
+  @media (prefers-color-scheme: dark) { .spark.down { color: #6FD6A8; } }
+  .spark .none { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.3; }
+  .w-act { display: flex; flex-wrap: wrap; gap: 6px; }
+  .w-act form { display: contents; }
   .empty { padding: var(--s5) var(--s4); text-align: center; display: grid; gap: var(--s2); justify-items: center; }
+  .empty .w-icon { width: 64px; height: 64px; border-radius: 20px; }
+  .empty .w-icon .ic { width: 30px; height: 30px; }
+  .empty h2 { font-size: var(--t-xl); }
   .empty p { color: var(--sub); max-width: 46ch; }
+  .t-lav { --tint: var(--lav); --ink: var(--lav-ink); } .t-mint { --tint: var(--mint); --ink: var(--mint-ink); }
+  .t-peach { --tint: var(--peach); --ink: var(--peach-ink); } .t-sky { --tint: var(--sky); --ink: var(--sky-ink); }
+  .t-butter { --tint: var(--butter); --ink: var(--butter-ink); } .t-rose { --tint: var(--rose); --ink: var(--rose-ink); }
   @media (max-width: 620px) {
-    .watch { grid-template-columns: 1fr 1fr; }
-    .watch > div:first-child { grid-column: 1 / -1; }
-    .stat { text-align: left; }
-    .watch form { grid-column: 1 / -1; }
+    .watch { padding: var(--s2); }
+    .w-mid { grid-template-columns: repeat(3, 1fr); }
+    .spark { grid-column: 1 / -1; }
+    .stat { padding: 8px 10px; }
+    .stat b { font-size: var(--t-sm); }
   }
 {% endblock %}
 {% block body %}
@@ -28,30 +47,58 @@
     <h1>Takiplerim</h1>
     <p>Takip ettiğin aramaları birkaç saatte bir yeniden çalıştırırım. Fiyat hedefinin altına inerse ya da son 30 günün normalinden belirgin ucuzlarsa Telegram'dan haber veririm.</p>
   </div>
-  {% if added %}<p class="notice" role="status">Takip eklendi. İlk kontrol birkaç saat içinde yapılacak.</p>{% endif %}
-  {% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+  {% if added %}<p class="notice notice-ok" role="status"><svg class="ic"><use href="#i-check"/></svg>Takip eklendi. İlk kontrol birkaç saat içinde yapılacak.</p>{% endif %}
+  {% if error %}<p class="notice notice-error" role="alert"><svg class="ic"><use href="#i-info"/></svg>{{ error }}</p>{% endif %}
 
   {% if items %}
-  <div class="card list">
-    {% for w in items %}
-    <div class="watch">
-      <div>
-        <h2>{{ w.name }}{% if not w.active %}<span class="paused">durduruldu</span>{% endif %}</h2>
-        <p class="when">{% if not w.active %}Tarih aralığı geçtiği için artık kontrol edilmiyor.{% elif w.last_checked %}Son kontrol {{ ts_str(w.last_checked) }}{% else %}Henüz kontrol edilmedi{% endif %}</p>
+  <div class="list">
+    {% for it in items %}{% set w = it.w %}
+    <article class="watch card t-{{ tint(w.name) }}{% if not w.active %} off{% endif %}" style="animation-delay: {{ [loop.index0, 6]|min * 45 }}ms">
+      <div class="w-top">
+        <span class="w-icon" aria-hidden="true"><svg class="ic"><use href="#i-bell"/></svg></span>
+        <div>
+          <h2>{{ w.name }}</h2>
+          <p class="when">
+            {% if not w.active %}<span class="pill">Durduruldu</span>{% else %}<span class="pill ok">Açık</span>{% endif %}
+            {% if it.rolling %}<span>Tarihler ilerliyor</span>{% endif %}
+            <span>{% if w.last_checked %}Son kontrol {{ ts_str(w.last_checked) }}{% else %}Henüz kontrol edilmedi{% endif %}</span>
+          </p>
+        </div>
       </div>
-      <p class="stat num"><span>Hedef</span><b>{{ money(w.threshold) if w.threshold else 'Yok' }}</b></p>
-      <p class="stat num"><span>Son en ucuz</span><b>{{ money(w.last_best) if w.last_best else '–' }}</b></p>
-      <form method="post" action="/takipler/{{ w.id }}/sil" onsubmit="return confirm('Bu takip silinsin mi?')">
-        <button class="btn btn-ghost btn-sm">Sil</button>
-      </form>
-    </div>
+      <div class="w-mid">
+        <p class="stat num"><span>Hedef</span><b>{{ money(w.threshold) if w.threshold else 'Yok' }}</b></p>
+        <p class="stat num{% if w.threshold and w.last_best and w.last_best <= w.threshold %} hit{% endif %}"><span>Şu an</span><b>{{ money(w.last_best) if w.last_best else '–' }}</b></p>
+        <p class="stat num"><span>30 günün en ucuzu</span><b>{{ money(it.low) if it.low else '–' }}</b></p>
+        <div class="spark{% if it.spark and it.spark.down %} down{% endif %}" {% if it.spark %}title="Son 30 gün: {{ money(it.spark.lo) }} – {{ money(it.spark.hi) }}, {{ it.n }} ölçüm"{% endif %}>
+          {% if it.spark %}{% set s = it.spark %}
+          <svg viewBox="0 0 {{ s.w }} {{ s.h }}" preserveAspectRatio="none" role="img" aria-label="Son 30 günün fiyat çizgisi, {{ money(s.lo) }} ile {{ money(s.hi) }} arası">
+            <defs><linearGradient id="g{{ w.id }}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".22"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
+            <path d="{{ s.area }}" fill="url(#g{{ w.id }})"/>
+            <path d="{{ s.line }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+            <circle cx="{{ s.last[0] }}" cy="{{ s.last[1] }}" r="3" fill="currentColor"/>
+          </svg>
+          {% else %}<span class="none">Fiyat çizgisi birkaç kontrolden sonra görünür</span>{% endif %}
+        </div>
+      </div>
+      <div class="w-act">
+        {% if it.url %}<a class="btn btn-tint btn-sm" href="{{ it.url }}"><svg class="ic"><use href="#i-search"/></svg>Şimdi ara</a>{% endif %}
+        <form method="post" action="/takipler/{{ w.id }}/durum">
+          <input type="hidden" name="active" value="{{ 0 if w.active else 1 }}">
+          <button class="btn btn-plain btn-sm">{% if w.active %}<svg class="ic"><use href="#i-pause"/></svg>Durdur{% else %}<svg class="ic"><use href="#i-play"/></svg>Sürdür{% endif %}</button>
+        </form>
+        <form method="post" action="/takipler/{{ w.id }}/sil" onsubmit="return confirm('Bu takip silinsin mi?')">
+          <button class="btn btn-danger btn-sm"><svg class="ic"><use href="#i-trash"/></svg>Sil</button>
+        </form>
+      </div>
+    </article>
     {% endfor %}
   </div>
   {% else %}
-  <div class="card empty">
+  <div class="card empty t-lav">
+    <span class="w-icon" aria-hidden="true"><svg class="ic"><use href="#i-bell"/></svg></span>
     <h2>Henüz takibin yok</h2>
-    <p>Bir arama yap, sonuçların altındaki "Bu aramayı takip et" bölümüne hedef fiyatını yaz.</p>
-    <a class="btn" href="/">Gezi ara</a>
+    <p>Bir arama yap, sonuçların altındaki "Bu aramayı takip et" bölümüne hedef fiyatını yaz. Fiyat düşünce Telegram'dan haber veririm.</p>
+    <a class="btn" href="/"><svg class="ic"><use href="#i-search"/></svg>Gezi ara</a>
   </div>
   {% endif %}
 </div>
