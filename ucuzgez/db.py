@@ -129,6 +129,9 @@ class DB:
     def user(self, uid: int):
         return self.one("SELECT * FROM users WHERE id=?", (uid,))
 
+    def user_by_invite(self, invite: str):
+        return self.one("SELECT * FROM users WHERE tg_invite=?", (invite,)) if invite else None
+
     def link_telegram(self, invite: str, chat_id: int):
         u = self.one("SELECT * FROM users WHERE tg_invite=?", (invite,))
         if not u:

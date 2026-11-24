@@ -16,14 +16,14 @@
   <div>
     <div class="hero-mark" aria-hidden="true"><svg class="ic"><use href="#i-plane"/></svg></div>
     <h1>Ucuz geziler,<br>esnek tarihler</h1>
-    <p style="margin-top:var(--s2)">UcuzGez davetle çalışır. Sana gönderilen giriş linkini aç ya da linkteki kodu buraya yapıştır.</p>
+    <p style="margin-top:var(--s2)">UcuzGez davetle çalışır. Sana gönderilen giriş linkini aç ya da linkin tamamını veya Telegram kodunu buraya yapıştır.</p>
     <div class="dots" aria-hidden="true"><i style="background:var(--lav)"></i><i style="background:var(--mint)"></i><i style="background:var(--peach)"></i><i style="background:var(--sky)"></i><i style="background:var(--butter)"></i><i style="background:var(--rose)"></i></div>
   </div>
   {% if error %}<p class="notice notice-error" role="alert"><svg class="ic"><use href="#i-info"/></svg>{{ error }}</p>{% endif %}
   <form method="post" action="/giris" class="card">
     <div class="field">
-      <label class="label" for="token">Giriş kodu</label>
-      <input class="input" id="token" name="token" autocomplete="off" required autofocus>
+      <label class="label" for="token">Giriş linki ya da kod</label>
+      <input class="input" id="token" name="token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required autofocus>
     </div>
     <button class="btn btn-block">Giriş yap</button>
   </form>

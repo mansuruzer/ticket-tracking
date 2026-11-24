@@ -91,7 +91,7 @@ def test_pages_render(env):
     for path in ["/", "/takipler", "/ayarlar"]:
         assert c.get(path).status_code == 200
     c.cookies.clear()
-    assert "Giriş kodu" in c.get("/").text
+    assert "Giriş linki ya da kod" in c.get("/").text
 
 
 def test_price_calendar_levels():
@@ -109,3 +109,21 @@ def test_sparkline_and_tint():
     s = sparkline([(0, 300), (10, 100), (20, 200)])
     assert s["line"].startswith("M") and s["down"] and s["lo"] == 100
     assert tint("VIE") == tint("VIE")
+
+
+@pytest.mark.parametrize("form", ["{tok}", "  {tok}. ", "https://ticket-tracking-sage.vercel.app/giris?t={tok}",
+                                  "{Tok}", "{inv}", "/start {inv}", "{INV}"])
+def test_login_accepts_link_token_or_invite(env, form):
+    svc, u, c = env
+    c.cookies.clear()
+    tok, inv = u["token"], u["tg_invite"]
+    value = form.format(tok=tok, Tok=tok[:1].swapcase() + tok[1:], inv=inv, INV=inv.upper())
+    r = c.post("/giris", data={"token": value}, follow_redirects=False)
+    assert r.status_code == 303 and r.cookies.get("ug_t") == tok
+
+
+def test_login_rejects_wrong_code(env):
+    _, _, c = env
+    c.cookies.clear()
+    for bad in ["", "yanlis", "/start 00000000", "https://x/giris?t=yok"]:
+        assert c.post("/giris", data={"token": bad}, follow_redirects=False).status_code == 401

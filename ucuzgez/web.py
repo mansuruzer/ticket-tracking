@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
 from datetime import date, timedelta
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from starlette.applications import Starlette
 from starlette.concurrency import run_in_threadpool
@@ -292,15 +293,33 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
                       saved=request.query_params.get("kaydedildi") == "1")
 
     async def login(request: Request):
-        tok = request.query_params.get("t", "")
+        raw = request.query_params.get("t", "")
         if request.method == "POST":
-            tok = ((await request.form()).get("token") or "").strip()
-        if not svc.db.user_by_token(tok):
-            return render(request, "login.html", error="Bu giriş kodu geçerli değil. Kodu yöneticiden tekrar iste.",
-                          status=401)
+            raw = (await request.form()).get("token") or ""
+        u = find_login_user(raw)
+        if not u:
+            return render(request, "login.html", status=401,
+                          error="Bu kod geçerli değil. Sana gönderilen linkin tamamını ya da Telegram kodunu "
+                                "(örn. /start 1a2b3c4d) buraya yapıştırabilirsin.")
         r = RedirectResponse("/", status_code=303)
-        r.set_cookie(COOKIE, tok, max_age=180 * 86400, httponly=True, samesite="lax")
+        r.set_cookie(COOKIE, u["token"], max_age=180 * 86400, httponly=True, samesite="lax")
         return r
+
+    def find_login_user(raw: str):
+        """Giriş linkinin tamamını, linkteki kodu ya da Telegram davet kodunu kabul eder."""
+        s = (raw or "").strip().strip("\"'<>").rstrip(".,;:!)")
+        if "t=" in s:                                       # link olduğu gibi yapıştırıldıysa
+            s = (parse_qs(urlparse(s).query).get("t") or parse_qs(s.split("?", 1)[-1]).get("t") or [s])[0]
+        s = re.sub(r"^/?start\s+", "", s, flags=re.I).strip()
+        if not s:
+            return None
+        for cand in dict.fromkeys([s, s[:1].lower() + s[1:], s[:1].upper() + s[1:]]):   # telefon ilk harfi büyütmüş olabilir
+            u = svc.db.user_by_token(cand)
+            if u:
+                return u
+        if re.fullmatch(r"[0-9a-fA-F]{8}", s):              # Telegram /start kodu
+            return svc.db.user_by_invite(s.lower())
+        return None
 
     async def logout(request: Request):
         r = RedirectResponse("/", status_code=303)
