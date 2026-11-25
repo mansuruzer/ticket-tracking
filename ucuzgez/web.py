@@ -63,8 +63,9 @@ def price_calendar(daily: dict, d1: date, d2: date) -> list[dict]:
             day += timedelta(days=1)
         cells += [None] * (-len(cells) % 7)
         if any(c and c["in"] for c in cells):
-            months.append({"label": f"{TR_MONTHS_LONG[d.month - 1]} {d.year}",
-                           "weeks": [cells[i:i + 7] for i in range(0, len(cells), 7)]})
+            weeks = [cells[i:i + 7] for i in range(0, len(cells), 7)]
+            months.append({"label": f"{TR_MONTHS_LONG[d.month - 1]} {d.year}",     # aralık dışı haftalar gizli
+                           "weeks": [w for w in weeks if any(c and c["in"] for c in w)]})
         d = nxt
     return months
 
@@ -403,6 +404,8 @@ def create_web_app(svc: Services, lifespan=None, extra_routes: list | None = Non
         Route("/robots.txt", robots),
         Route("/manifest.webmanifest", manifest),
         Route("/icon.svg", static_file("icon.svg", "image/svg+xml")),
+        Route("/fonts/dg-latin.woff2", static_file("dg-latin.woff2", "font/woff2")),
+        Route("/fonts/dg-latin-ext.woff2", static_file("dg-latin-ext.woff2", "font/woff2")),
         Route("/icon-180.png", static_file("icon-180.png", "image/png")),
         Route("/icon-512.png", static_file("icon-512.png", "image/png")),
         *(extra_routes or []),

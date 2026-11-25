@@ -35,7 +35,7 @@ def test_search_renders_calendar_and_actions(env):
     assert r.status_code == 200
     assert "Fiyat takvimi" in r.text and 'class="day l' in r.text
     assert 'data-act="ics"' in r.text and "Paylaş" in r.text
-    assert "En ucuz çıkış günü" in r.text
+    assert "En ucuz gün" in r.text
 
 
 def test_day_link_narrows_to_single_day(env):
@@ -46,7 +46,7 @@ def test_day_link_narrows_to_single_day(env):
     href = re.search(r'class="day l\d[^"]*" href="([^"]+)"', r.text).group(1).replace("&amp;", "&")
     day = re.search(r"date_from=([\d-]+)", href).group(1)
     r2 = c.get(href)
-    assert r2.status_code == 200 and "yalnız" in r2.text and "Fiyat takvimi" not in r2.text
+    assert r2.status_code == 200 and "Tüm tarihler" in r2.text and "Fiyat takvimi" not in r2.text
     assert f'data-start="{day}"' in r2.text
 
 
@@ -81,7 +81,8 @@ def test_pwa_files(env):
     _, _, c = env
     m = c.get("/manifest.webmanifest")
     assert m.status_code == 200 and m.json()["display"] == "standalone"
-    for path, kind in [("/icon.svg", "image/svg+xml"), ("/icon-180.png", "image/png"), ("/icon-512.png", "image/png")]:
+    for path, kind in [("/icon.svg", "image/svg+xml"), ("/icon-180.png", "image/png"), ("/icon-512.png", "image/png"),
+                       ("/fonts/dg-latin.woff2", "font/woff2"), ("/fonts/dg-latin-ext.woff2", "font/woff2")]:
         r = c.get(path)
         assert r.status_code == 200 and r.headers["content-type"].startswith(kind)
 
@@ -154,7 +155,7 @@ def test_guest_settings_create_browser_account(env):
     assert g["name"] == "Misafir" and g["home_code"] == "SAW" and not g["is_admin"]
     c.cookies.set("ug_t", g["token"])
     page = c.get("/ayarlar").text
-    assert "Telegram" not in page and "bu tarayıcıda saklanır" in page
+    assert "Telegram" not in page and "Çıkış yap" not in page
     assert 'value=""' in c.get("/").text.split('id="origin"')[1][:80]   # kayıtlı kalkış kullanılır
 
 

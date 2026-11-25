@@ -26,7 +26,7 @@ def _get(k: str, d: str = "") -> str:
 @dataclass
 class Settings:
     db_path: str
-    provider: str            # "travelpayouts" | "mock"
+    provider: str            # "auto" (tanımlı tüm gerçek kaynaklar) | "travelpayouts" | "ignav" | "mock"
     tp_token: str
     tp_market: str
     tp_rate_per_min: int
@@ -34,6 +34,8 @@ class Settings:
     eur_rate: float          # 1 EUR kaç birim `currency` (kara yolu tahminini çevirmek için)
     serpapi_key: str
     duffel_token: str
+    ignav_key: str
+    ignav_market: str
     verify_top_n: int
     telegram_token: str
     base_url: str
@@ -55,7 +57,7 @@ def load_settings() -> Settings:
     cur = _get("UG_CURRENCY", "try").lower()
     return Settings(
         db_path=_get("UG_DB_PATH", "ucuzgez.db"),
-        provider=_get("UG_PROVIDER", "mock").lower(),
+        provider=_get("UG_PROVIDER", "auto").lower(),
         tp_token=_get("TRAVELPAYOUTS_TOKEN"),
         tp_market=_get("TRAVELPAYOUTS_MARKET", "tr"),
         tp_rate_per_min=int(_get("TRAVELPAYOUTS_RATE_PER_MIN", "50")),
@@ -64,7 +66,11 @@ def load_settings() -> Settings:
         eur_rate=float(_get("UG_EUR_RATE", {"eur": "1", "try": "54", "usd": "1.17"}.get(cur, "1"))),
         serpapi_key=_get("SERPAPI_KEY"),
         duffel_token=_get("DUFFEL_TOKEN"),
-        verify_top_n=int(_get("UG_VERIFY_TOP_N", "0")),
+        ignav_key=_get("IGNAV_API_KEY"),
+        ignav_market=_get("IGNAV_MARKET", "TR"),
+        # canlı doğrulayıcı tanımlıysa ilk 3 sonuç canlı fiyatla kontrol edilir
+        verify_top_n=int(_get("UG_VERIFY_TOP_N", "3" if (_get("IGNAV_API_KEY") or _get("SERPAPI_KEY")
+                                                           or _get("DUFFEL_TOKEN")) else "0")),
         telegram_token=_get("TELEGRAM_BOT_TOKEN"),
         base_url=_get("UG_BASE_URL", "http://localhost:8000"),
         watch_interval_min=int(_get("UG_WATCH_INTERVAL_MIN", "180")),

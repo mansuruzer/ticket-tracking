@@ -2,18 +2,18 @@
 {% block title %}Ayarlar – UcuzGez{% endblock %}
 {% block style %}
   .page { max-width: 680px; margin: 0 auto; display: grid; gap: var(--s3); }
-  .page-head h1 { font-size: var(--t-2xl); letter-spacing: -0.035em; }
+  .page-head h1 { font-size: var(--t-2xl); letter-spacing: 0; }
   .group-title { margin: 0 0 6px var(--s2); font-size: 13px; font-weight: 500; color: var(--sub); text-transform: none; }
   .box { padding: var(--s3); display: grid; gap: var(--s3); }
   .box-head { display: grid; grid-template-columns: auto 1fr; gap: var(--s2); align-items: center; }
-  .box-icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; }
-  .box h2 { font-size: var(--t-md); font-weight: 600; letter-spacing: -0.015em; }
+  .box-icon { width: 36px; height: 36px; border-radius: var(--r-ctl); display: grid; place-items: center; }
+  .box h2 { font-size: var(--t-md); font-weight: 600; letter-spacing: 0; }
   .box-head p { margin-top: 1px; color: var(--sub); font-size: var(--t-sm); }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
   .row { display: flex; gap: var(--s1); flex-wrap: wrap; }
   .airports { display: flex; flex-wrap: wrap; gap: 6px; }
   .airports span { padding: 5px 12px; border-radius: var(--r-pill); background: var(--sky); color: var(--sky-ink); font-size: var(--t-sm); font-weight: 600; }
-  code { white-space: nowrap; background: var(--fill); padding: 3px 8px; border-radius: 7px; font-size: .92em; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  code { white-space: nowrap; background: var(--fill); padding: 3px 8px; border-radius: var(--r-sm); font-size: .92em; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
   .copy { cursor: pointer; }
   .tg-ok { display: flex; align-items: center; gap: 8px; color: var(--mint-ink); font-weight: 600; }
   .install { font-size: var(--t-sm); color: var(--sub); }
@@ -29,7 +29,7 @@
   <div class="card box">
     <div class="box-head">
       <span class="box-icon" style="background:var(--sky);color:var(--sky-ink)"><svg class="ic"><use href="#i-loc"/></svg></span>
-      <div><h2>Nereden uçuyorsun?</h2><p>Arama yaparken kalkış alanını boş bırakırsan buradaki bilgiyi kullanırım.</p></div>
+      <h2>Kalkış yeri</h2>
     </div>
     {% if near %}
     <div class="airports">{% for c, km in near %}<span>{{ c|city }}, {{ km|round|int }} km</span>{% endfor %}</div>
@@ -40,11 +40,11 @@
       <input type="hidden" name="lat"><input type="hidden" name="lon">
       <div class="pair">
         <div class="field">
-          <label class="label" for="home_code">Ev havalimanı (konum yoksa)</label>
+          <label class="label" for="home_code">Havalimanı</label>
           <input class="input" id="home_code" name="home_code" value="{{ user.home_code or '' }}" placeholder="IST">
         </div>
         <div class="field">
-          <label class="label" for="radius">Konumdan en fazla uzaklık</label>
+          <label class="label" for="radius">Uzaklık</label>
           <div class="suffix" style="position:relative"><input class="input num" type="number" min="20" max="1000" id="radius" name="radius" value="{{ user.home_radius_km|int }}" style="padding-right:48px"><span style="position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:var(--t-sm)">km</span></div>
         </div>
       </div>
@@ -64,14 +64,13 @@
   <div class="card box">
     <div class="box-head">
       <span class="box-icon" style="background:var(--lav);color:var(--lav-ink)"><svg class="ic"><use href="#i-bell"/></svg></span>
-      <div><h2>Telegram</h2><p>Fiyat bildirimleri ve hızlı aramalar için.</p></div>
+      <h2>Telegram</h2>
     </div>
     {% if user.tg_chat_id %}
     <p class="tg-ok"><svg class="ic"><use href="#i-check"/></svg>Telegram hesabın bağlı.</p>
     {% else %}
     <p>Bağlamak için bota şunu yaz: <code class="copy" data-copy="/start {{ user.tg_invite }}" title="Kopyalamak için dokun">/start {{ user.tg_invite }}</code></p>
     {% endif %}
-    <p class="sm sub">Botta tüm komutları görmek için <code>/yardim</code> yaz.</p>
   </div>
   </section>
   {% endif %}
@@ -81,10 +80,10 @@
   <div class="card box">
     <div class="box-head">
       <span class="box-icon" style="background:var(--peach);color:var(--peach-ink)"><svg class="ic"><use href="#i-plane"/></svg></span>
-      <div><h2>Ana ekrana ekle</h2><p>UcuzGez'i telefonunda uygulama gibi açabilirsin.</p></div>
+      <h2>Ana ekrana ekle</h2>
     </div>
-    <p class="install">iPhone'da Safari'de Paylaş düğmesine, sonra "Ana Ekrana Ekle"ye dokun. Android'de Chrome menüsünden "Ana ekrana ekle"yi seç.</p>
-    {% if guest or not track %}<p class="xs sub">Ayarların bu tarayıcıda saklanır; giriş yapmana gerek yok.</p>
+    <p class="install">Safari: Paylaş → Ana Ekrana Ekle. Chrome: menü → Ana ekrana ekle.</p>
+    {% if guest or not track %}
     {% else %}<div class="row"><a class="btn btn-plain btn-sm" href="/cikis">Çıkış yap</a></div>{% endif %}
   </div>
   </section>

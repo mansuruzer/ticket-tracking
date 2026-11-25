@@ -2,21 +2,21 @@
 {% block title %}Takiplerim – UcuzGez{% endblock %}
 {% block style %}
   .page { max-width: 760px; margin: 0 auto; display: grid; gap: var(--s3); }
-  .page-head h1 { font-size: var(--t-2xl); letter-spacing: -0.035em; }
+  .page-head h1 { font-size: var(--t-2xl); letter-spacing: 0; }
   .page-head p { margin-top: var(--s1); color: var(--sub); max-width: 60ch; }
   .list { display: grid; gap: var(--s2); }
   .watch { padding: var(--s3); display: grid; gap: var(--s2); animation: enter .45s var(--ease) both; }
   .watch.off { opacity: .72; }
   .w-top { display: grid; grid-template-columns: auto 1fr; gap: var(--s2); align-items: start; }
-  .w-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--tint); color: var(--ink); }
-  .watch h2 { font-size: var(--t-md); letter-spacing: -0.015em; font-weight: 600; line-height: 1.4; }
+  .w-icon { width: 40px; height: 40px; border-radius: var(--r-ctl); display: grid; place-items: center; background: var(--tint); color: var(--ink); }
+  .watch h2 { font-size: var(--t-md); letter-spacing: 0; font-weight: 600; line-height: 1.4; }
   .watch .when { font-size: var(--t-xs); color: var(--muted); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
   .pill { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: var(--r-pill); font-size: 11px; font-weight: 600; background: var(--fill); color: var(--sub); }
   .pill.ok { background: var(--mint); color: var(--mint-ink); }
   .w-mid { display: grid; grid-template-columns: repeat(3, 1fr) minmax(120px, 1.4fr); gap: var(--s1); align-items: stretch; }
   .stat { padding: 10px var(--s2); border-radius: var(--r-ctl); background: var(--fill); }
   .stat span { display: block; font-size: 11px; font-weight: 500; color: var(--sub); }
-  .stat b { font-size: var(--t-md); font-weight: 600; letter-spacing: -0.015em; }
+  .stat b { font-size: var(--t-md); font-weight: 600; letter-spacing: 0; }
   .stat.hit { background: var(--mint); } .stat.hit span, .stat.hit b { color: var(--mint-ink); }
   .spark { position: relative; display: grid; place-items: center; padding: 6px; border-radius: var(--r-ctl); background: var(--fill); color: var(--brand); }
   .spark svg { width: 100%; height: 40px; overflow: visible; }
@@ -26,7 +26,7 @@
   .w-act { display: flex; flex-wrap: wrap; gap: 6px; }
   .w-act form { display: contents; }
   .empty { padding: var(--s5) var(--s4); text-align: center; display: grid; gap: var(--s2); justify-items: center; }
-  .empty .w-icon { width: 64px; height: 64px; border-radius: 20px; }
+  .empty .w-icon { width: 64px; height: 64px; border-radius: var(--r-card); }
   .empty .w-icon .ic { width: 30px; height: 30px; }
   .empty h2 { font-size: var(--t-xl); }
   .empty p { color: var(--sub); max-width: 46ch; }
@@ -45,9 +45,8 @@
 <div class="page">
   <div class="page-head">
     <h1>Takiplerim</h1>
-    <p>Takip ettiğin aramaları birkaç saatte bir yeniden çalıştırırım. Fiyat hedefinin altına inerse ya da son 30 günün normalinden belirgin ucuzlarsa Telegram'dan haber veririm.</p>
   </div>
-  {% if added %}<p class="notice notice-ok" role="status"><svg class="ic"><use href="#i-check"/></svg>Takip eklendi. İlk kontrol birkaç saat içinde yapılacak.</p>{% endif %}
+  {% if added %}<p class="notice notice-ok" role="status"><svg class="ic"><use href="#i-check"/></svg>Takip eklendi.</p>{% endif %}
   {% if error %}<p class="notice notice-error" role="alert"><svg class="ic"><use href="#i-info"/></svg>{{ error }}</p>{% endif %}
 
   {% if items %}
@@ -77,7 +76,7 @@
             <path d="{{ s.line }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
             <circle cx="{{ s.last[0] }}" cy="{{ s.last[1] }}" r="3" fill="currentColor"/>
           </svg>
-          {% else %}<span class="none">Fiyat çizgisi birkaç kontrolden sonra görünür</span>{% endif %}
+          {% else %}<span class="none">–</span>{% endif %}
         </div>
       </div>
       <div class="w-act">
@@ -97,7 +96,6 @@
   <div class="card empty t-lav">
     <span class="w-icon" aria-hidden="true"><svg class="ic"><use href="#i-bell"/></svg></span>
     <h2>Henüz takibin yok</h2>
-    <p>Bir arama yap, sonuçların altındaki "Bu aramayı takip et" bölümüne hedef fiyatını yaz. Fiyat düşünce Telegram'dan haber veririm.</p>
     <a class="btn" href="/"><svg class="ic"><use href="#i-search"/></svg>Gezi ara</a>
   </div>
   {% endif %}

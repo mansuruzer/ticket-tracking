@@ -27,11 +27,14 @@ Tarayıcı ◄─►│ web (Starlette)├─► services ─► planner ──�
 | Kaynak | Ne için | Ücret | Not |
 |---|---|---|---|
 | **Travelpayouts / Aviasales Data API** | Ana tarama ("her yere", takip, radar) | Ücretsiz | Son ~48 saatte görülen **önbellek** fiyatları. Keşif için ideal, satın almadan önce linkten kontrol et. |
-| SerpApi (Google Flights) | En iyi N sonucu canlı doğrulama | Ücretsiz kotası var, sonrası ücretli | `SERPAPI_KEY`, `UG_VERIFY_TOP_N=3` |
+| Ignav | Canlı fiyat; en iyi N sonucu doğrular, Travelpayouts yoksa belirli şehir aramalarını yapar | İlk 1.000 istek ücretsiz | `IGNAV_API_KEY` |
+| SerpApi (Google Flights) | En iyi N sonucu canlı doğrulama | Ayda 250 arama ücretsiz | `SERPAPI_KEY` |
 | Duffel | Canlı doğrulama (Pegasus Travelport üzerinden var) | Arama başına küçük ücret | `DUFFEL_TOKEN` |
 | `mock` | Anahtarsız deneme | – | Sahte ama tutarlı veri |
 
-Neden Amadeus ya da Kiwi değil? Amadeus self-service API'leri 17 Temmuz 2026'da kapandı. Kiwi Tequila ise artık yalnızca anlaşmalı iş ortaklarına açık. Pegasus ve AJet'in sitelerini kazımak (scraping) kullanım şartlarına aykırı ve sık kırılıyor. O yüzden sistem, sağlayıcı eklenebilir bir yapıda kuruldu: `providers/` altına `fetch_month()` uygulayan yeni bir sınıf eklemen yeterli.
+`UG_PROVIDER=auto` (varsayılan) anahtarı tanımlı tüm kaynakları birlikte kullanır; doğrulayıcı varsa ilk 3 sonuç canlı fiyatla kontrol edilir.
+
+Neden Amadeus ya da Kiwi değil? Amadeus self-service API'leri 17 Temmuz 2026'da kapandı; yalnız kurumsal sözleşmeyle erişilebiliyor. Kiwi Tequila ise artık yalnızca anlaşmalı iş ortaklarına açık. Pegasus ve AJet'in sitelerini kazımak (scraping) kullanım şartlarına aykırı ve sık kırılıyor. O yüzden sistem, sağlayıcı eklenebilir bir yapıda kuruldu: `providers/` altına `fetch_month()` uygulayan yeni bir sınıf eklemen yeterli.
 
 ## Hızlı başlangıç (kendi bilgisayarında)
 
@@ -46,7 +49,7 @@ pytest -q
 ```
 
 ### Anahtarlar
-1. **Travelpayouts:** travelpayouts.com → kayıt → *Aviasales* programına katıl → API token → `TRAVELPAYOUTS_TOKEN`, `UG_PROVIDER=travelpayouts`
+1. **Travelpayouts:** travelpayouts.com → kayıt → *Aviasales* programına katıl → API token → `TRAVELPAYOUTS_TOKEN`
 2. **Telegram:** @BotFather → `/newbot` → token → `TELEGRAM_BOT_TOKEN`
 3. (Opsiyonel) Dünyadaki bütün havalimanlarını indir: `python -m ucuzgez.cli update-airports` (yerleşik liste Türkiye, Avrupa ve çevresindeki ~95 havalimanı)
 
@@ -110,7 +113,7 @@ Vercel Cron (günde 1, yedek)  ──► /cron           ▼
    | `TELEGRAM_BOT_TOKEN` | @BotFather token |
    | `CRON_SECRET` | rastgele uzun bir dize |
    | `UG_ADMIN_CHAT_ID` | kendi Telegram chat id'n |
-   | `UG_PROVIDER` | `mock`; Travelpayouts token'ını alınca `travelpayouts` + `TRAVELPAYOUTS_TOKEN` |
+   | `UG_PROVIDER` | `auto` (gerçek kaynaklar) ya da `mock` (deneme verisi) |
 
    → **Deploy** → ardından **Visit**'e bas. İlk ziyarette sistem kendini kurar: Telegram webhook'unu kaydeder, seni yönetici olarak oluşturur ve Telegram'dan web giriş linkini gönderir.
 3. (Opsiyonel) Başka kullanıcı: `https://PROJE.vercel.app/yonetim/kullanici?key=CRON_SECRET&ad=Ali`

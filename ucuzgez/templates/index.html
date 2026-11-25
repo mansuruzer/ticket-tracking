@@ -37,10 +37,10 @@
                  background: transparent; color: inherit; cursor: pointer; opacity: .6; }
   .chip button:hover { opacity: 1; background: rgba(0, 0, 0, .06); }
   .suggest { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 6px); margin: 0; padding: 6px; list-style: none;
-             background: var(--elev); border-radius: 15px; box-shadow: var(--shadow-lift), 0 0 0 .5px var(--sep);
+             background: var(--elev); border-radius: var(--r-ctl); box-shadow: var(--shadow-lift), 0 0 0 .5px var(--sep);
              max-height: 320px; overflow: auto; animation: enter .2s var(--ease) both; }
   .suggest[hidden] { display: none; }
-  .suggest li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); padding: 9px 11px; border-radius: 10px; cursor: pointer; }
+  .suggest li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); padding: 9px 11px; border-radius: var(--r-ctl); cursor: pointer; }
   .suggest li[aria-selected="true"], .suggest li:hover { background: var(--brand-soft); }
   .suggest .k { font-size: var(--t-xs); color: var(--muted); white-space: nowrap; }
   .quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
@@ -60,7 +60,7 @@
   /* sonuçlar */
   .results { display: grid; gap: var(--s2); min-width: 0; }
   .res-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s2); flex-wrap: wrap; padding: 2px 2px var(--s1); }
-  .res-head h2 { font-size: var(--t-2xl); letter-spacing: -0.035em; }
+  .res-head h2 { font-size: var(--t-2xl); letter-spacing: 0; }
   .res-meta { margin-top: 4px; font-size: var(--t-sm); color: var(--sub); }
   .toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s1); flex-wrap: wrap; }
   .hint { display: flex; align-items: center; gap: 10px; padding: 11px var(--s2); border-radius: var(--r-ctl); background: var(--mint); color: var(--mint-ink); font-size: var(--t-sm); }
@@ -71,11 +71,11 @@
   .trip[hidden] { display: none; }
   .postcard { display: grid; grid-template-columns: auto 1fr auto; gap: var(--s2); align-items: center; padding: var(--s3) var(--s3) var(--s2);
               background: linear-gradient(180deg, var(--tint) 0%, color-mix(in srgb, var(--tint) 35%, transparent) 100%); }
-  .stamp { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; background: var(--card); color: var(--ink);
+  .stamp { width: 52px; height: 52px; border-radius: var(--r-ctl); display: grid; place-items: center; background: var(--card); color: var(--ink);
            font-weight: 700; font-size: 14px; letter-spacing: .02em; box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 6px 14px -8px rgba(0,0,0,.25); }
-  .trip h3 { font-size: var(--t-lg); letter-spacing: -0.025em; }
+  .trip h3 { font-size: var(--t-lg); letter-spacing: 0; }
   .trip-when { margin-top: 2px; font-size: var(--t-sm); color: var(--sub); }
-  .price { text-align: right; font-size: var(--t-xl); font-weight: 700; letter-spacing: -0.035em; line-height: 1.1; }
+  .price { text-align: right; font-size: var(--t-xl); font-weight: 700; letter-spacing: 0; line-height: 1.1; }
   .price small { display: block; margin-top: 3px; font-size: var(--t-xs); font-weight: 500; letter-spacing: 0; color: var(--sub); }
   .tag { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; padding: 2px 9px; border-radius: var(--r-pill); font-size: var(--t-xs); font-weight: 600;
          background: var(--card); color: var(--ink); }
@@ -101,7 +101,7 @@
   .stop span { font-size: var(--t-xs); color: var(--sub); }
   .stop em { font-style: normal; font-size: var(--t-xs); color: var(--muted); }
 
-  .legs { display: grid; margin: 0; background: var(--fill); border-radius: 15px; padding: 0 var(--s2); }
+  .legs { display: grid; margin: 0; background: var(--fill); border-radius: var(--r-ctl); padding: 0 var(--s2); }
   .leg { display: grid; grid-template-columns: 52px 1fr auto; gap: 2px var(--s2); align-items: baseline; padding: 11px 0; border-bottom: .5px solid var(--sep); }
   .leg:last-child { border-bottom: 0; }
   .leg dt { font-size: var(--t-sm); font-weight: 600; color: var(--sub); }
@@ -114,7 +114,7 @@
             background: var(--mint); color: var(--mint-ink); font-size: var(--t-sm); }
   .actions { display: flex; gap: 6px; padding: var(--s1) 0 2px; }
   .act { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--brand); font: inherit;
-         font-size: var(--t-sm); font-weight: 600; padding: 7px 10px; border-radius: 10px; cursor: pointer; }
+         font-size: var(--t-sm); font-weight: 600; padding: 7px 10px; border-radius: var(--r-ctl); cursor: pointer; }
   .act:hover { background: var(--brand-soft); }
   .act .ic { width: 17px; height: 17px; }
 
@@ -123,12 +123,12 @@
   .cal-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); flex-wrap: wrap; }
   .cal-head h3 { font-size: var(--t-lg); }
   .legend { display: flex; align-items: center; gap: 4px; font-size: var(--t-xs); color: var(--sub); }
-  .legend i { width: 14px; height: 14px; border-radius: 5px; }
+  .legend i { width: 14px; height: 14px; border-radius: var(--r-sm); }
   .months { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--s4) var(--s3); }
-  .month h4 { margin: 0 0 var(--s1); font-size: var(--t-sm); font-weight: 600; letter-spacing: -0.01em; }
+  .month h4 { margin: 0 0 var(--s1); font-size: var(--t-sm); font-weight: 600; letter-spacing: 0; }
   .grid7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
   .dow { font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; padding-bottom: 2px; }
-  .day { position: relative; display: grid; align-content: center; justify-items: center; aspect-ratio: 1 / 1.05; border-radius: 11px;
+  .day { position: relative; display: grid; align-content: center; justify-items: center; aspect-ratio: 1 / 1.05; border-radius: var(--r-ctl);
          font-size: 12px; line-height: 1.15; color: var(--muted); text-decoration: none; }
   .day b { font-weight: 600; font-size: 13px; }
   .day small { font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -144,10 +144,10 @@
   .l4 { --tint: var(--peach); --ink: var(--peach-ink); }
 
   .empty { padding: var(--s5) var(--s4); text-align: center; }
-  .empty h2 { font-size: var(--t-2xl); letter-spacing: -0.035em; margin-bottom: var(--s1); }
+  .empty h2 { font-size: var(--t-2xl); letter-spacing: 0; margin-bottom: var(--s1); }
   .empty p { max-width: 46ch; margin: 0 auto; color: var(--sub); }
   .ideas { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); margin-top: var(--s4); text-align: left; }
-  .idea { display: grid; gap: var(--s1); padding: var(--s3); border-radius: 18px; background: var(--tint); color: var(--ink); text-decoration: none;
+  .idea { display: grid; gap: var(--s1); padding: var(--s3); border-radius: var(--r-card); background: var(--tint); color: var(--ink); text-decoration: none;
           transition: transform .4s var(--spring), box-shadow .25s ease; }
   .idea:hover { color: var(--ink); transform: translateY(-3px); box-shadow: var(--shadow-lift); }
   .idea .ic { width: 22px; height: 22px; }
@@ -172,7 +172,7 @@
     .postcard { padding: var(--s2) var(--s2) var(--s1); grid-template-columns: auto 1fr; }
     .postcard .price { grid-column: 1 / -1; text-align: left; display: flex; align-items: baseline; gap: 8px; }
     .postcard .price small { margin: 0; }
-    .stamp { width: 44px; height: 44px; border-radius: 13px; font-size: 13px; }
+    .stamp { width: 44px; height: 44px; border-radius: var(--r-ctl); font-size: 13px; }
     .trip-body { padding: 0 var(--s2) var(--s1); }
     .route:not(.route-open) { display: none; }
     .legs { margin-top: var(--s1); }
@@ -204,7 +204,7 @@
       </div>
 
       <div class="field">
-        <span class="label">Ne zaman yola çıkabilirim</span>
+        <span class="label">Gidiş aralığı</span>
         <div class="pair">
           <div><label class="sr" for="date_from">En erken gidiş</label>
             <input class="input num" type="date" id="date_from" name="date_from" value="{{ form.date_from }}" required></div>
@@ -217,7 +217,7 @@
       </div>
 
       <div class="field">
-        <span class="label">Kaç gün kalırım</span>
+        <span class="label">Kalış</span>
         <div class="pair">
           <div class="suffix"><label class="sr" for="min_days">En az gün</label><input class="input num" type="number" min="1" max="30" id="min_days" name="min_days" value="{{ form.min_days }}" required><span>en az</span></div>
           <div class="suffix"><label class="sr" for="max_days">En çok gün</label><input class="input num" type="number" min="1" max="30" id="max_days" name="max_days" value="{{ form.max_days }}" required><span>en çok</span></div>
@@ -234,7 +234,7 @@
         <span class="label" id="to-label">Nereye</span>
         <div class="tokens" data-name="to" aria-labelledby="to-label">
           {% for t in form.to %}<span class="chip">{{ place_label(t) }}<input type="hidden" name="to" value="{{ t }}"><button type="button" aria-label="{{ place_label(t) }} kaldır"><svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.6"><path d="M1 1l8 8M9 1l-8 8"/></svg></button></span>{% endfor %}
-          <input type="text" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-label="Hedef ekle" placeholder="{% if form.to %}Ekle{% else %}Her yer. Ülke, şehir ya da bölge yaz{% endif %}">
+          <input type="text" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-label="Hedef ekle" placeholder="{% if form.to %}Ekle{% else %}Her yer{% endif %}">
           <ul class="suggest" role="listbox" hidden></ul>
         </div>
         <div class="quick" aria-label="Hızlı bölgeler">
@@ -264,11 +264,11 @@
           <label class="switch">Sadece aktarmasız uçuşlar<input type="checkbox" name="direct" {% if form.direct %}checked{% endif %}></label>
           <label class="switch">Gittiğim şehirden döneyim<input type="checkbox" name="same_city" {% if form.same_city %}checked{% endif %}></label>
           <div class="field" style="margin-top:var(--s1)">
-            <label class="label" for="max_ground_hours">Başka şehirden dönüşte en fazla otobüs/tren süresi</label>
+            <label class="label" for="max_ground_hours">En fazla otobüs/tren süresi</label>
             <div class="suffix"><input class="input num" type="number" min="0" max="12" step="0.5" id="max_ground_hours" name="max_ground_hours" value="{{ form.max_ground_hours }}"><span>saat</span></div>
           </div>
           <div class="field" style="margin-top:var(--s1)">
-            <span class="label">Havayolu (seçmezsen hepsi)</span>
+            <span class="label">Havayolu</span>
             <div class="airlines">
               {% for code, name in airline_choices %}
               <label class="check"><input type="checkbox" name="airlines" value="{{ code }}" {% if code in (form.airlines or []) %}checked{% endif %}> {{ name }}</label>
@@ -288,36 +288,33 @@
     {% if not res %}
     <div class="card empty">
       <h2>Nereye gitsek?</h2>
-      <p>Tarih aralığını ve kaç gün kalmak istediğini seç. Hedefi boş bırakırsan en ucuz yerleri ben bulurum. Bir şehre gidip yakındaki başka bir şehirden dönmek daha ucuzsa onu da gösteririm.</p>
       {% set o = ('&origin=' ~ form.origin) if form.origin else '' %}
       <div class="ideas">
-        <a class="idea t-mint" href="/ara?min_days=2&max_days=3&to=r:vizesiz{{ o }}"><svg class="ic"><use href="#i-spark"/></svg><b>Vizesiz hafta sonu</b><span>2–3 gün, önümüzdeki 45 gün</span></a>
-        <a class="idea t-lav" href="/ara?min_days=3&max_days=5&to=r:schengen{{ o }}"><svg class="ic"><use href="#i-plane"/></svg><b>Schengen kaçamağı</b><span>3–5 gün, vizen varsa</span></a>
-        <a class="idea t-peach" href="/ara?min_days=5&max_days=8&to=r:balkanlar{{ o }}"><svg class="ic"><use href="#i-bus"/></svg><b>Bir hafta Balkanlar</b><span>5–8 gün, otobüsle şehir değiştirerek</span></a>
+        <a class="idea t-mint" href="/ara?min_days=2&max_days=3&to=r:vizesiz{{ o }}"><svg class="ic"><use href="#i-spark"/></svg><b>Vizesiz hafta sonu</b><span>2–3 gün</span></a>
+        <a class="idea t-lav" href="/ara?min_days=3&max_days=5&to=r:schengen{{ o }}"><svg class="ic"><use href="#i-plane"/></svg><b>Schengen</b><span>3–5 gün</span></a>
+        <a class="idea t-peach" href="/ara?min_days=5&max_days=8&to=r:balkanlar{{ o }}"><svg class="ic"><use href="#i-bus"/></svg><b>Balkanlar</b><span>5–8 gün</span></a>
       </div>
-      {% if not origins %}
-      <p class="sm" style="margin-top:var(--s3)"><a href="/ayarlar">Konumunu kaydet</a>, kalkış yerini her seferinde yazmana gerek kalmasın.</p>
-      {% endif %}
+
     </div>
     {% else %}
     <div class="res-head">
       <div>
         <h2>{% if trips %}{{ trips|length }} gezi bulundu{% else %}Gezi bulunamadı{% endif %}</h2>
-        <p class="res-meta">{{ q.origins|map('city')|join(', ') }} çıkışlı, {{ where }}{% if single_day %}, yalnız {{ day_str(q.date_from) }} gidiş{% endif %}. {{ res.destinations_scanned }} şehre bakıldı.</p>
+        <p class="res-meta">{{ q.origins|map('city')|join(', ') }} çıkışlı, {{ where }}{% if single_day %}, {{ day_str(q.date_from) }}{% endif %}</p>
       </div>
       {% if share_url %}<button type="button" class="btn btn-tint btn-sm" id="share-search" data-url="{{ share_url }}"><svg class="ic"><use href="#i-share"/></svg>Paylaş</button>{% endif %}
     </div>
     {% for n in visa_notes %}<p class="notice"><svg class="ic"><use href="#i-info"/></svg>{{ n }}</p>{% endfor %}
     {% if provider == 'mock' %}<p class="notice notice-error"><svg class="ic"><use href="#i-info"/></svg>Şu an deneme verisi gösteriliyor, fiyatlar gerçek değil.</p>
-    {% elif provider == 'travelpayouts' %}<p class="xs sub" style="padding:0 2px">Fiyatlar son 48 saatte görülen en düşük fiyatlardır. Satın almadan önce linkten kontrol et.</p>{% endif %}
+    {% endif %}
     {% for n in res.notes %}<p class="notice"><svg class="ic"><use href="#i-info"/></svg>{{ n }}</p>{% endfor %}
 
     {% if trips %}
     {% set cheapest = res.daily.items()|sort(attribute='1.0')|first %}
     {% if single_day %}
-    <p class="hint"><svg class="ic"><use href="#i-cal"/></svg>Sadece {{ day_str(q.date_from) }} günü çıkışlı geziler gösteriliyor.<a href="javascript:history.back()">Tüm tarihler</a></p>
+    <p class="hint"><svg class="ic"><use href="#i-cal"/></svg>{{ day_str(q.date_from) }}<a href="javascript:history.back()">Tüm tarihler</a></p>
     {% elif calendar and res.daily|length > 1 %}
-    <p class="hint"><svg class="ic"><use href="#i-spark"/></svg><span>En ucuz çıkış günü <strong>{{ day_str(cheapest[0]) }}</strong>, o gün {{ city(cheapest[1][1]) }} gezisi {{ money(cheapest[1][0]) }}.</span><a href="#takvim" data-view-go="cal">Takvimi aç</a></p>
+    <p class="hint"><svg class="ic"><use href="#i-spark"/></svg><span>En ucuz gün <strong>{{ day_str(cheapest[0]) }}</strong> · {{ money(cheapest[1][0]) }}</span><a href="#takvim" data-view-go="cal">Takvim</a></p>
     {% endif %}
 
     <div class="toolbar">
@@ -348,7 +345,7 @@
     {% if calendar and not single_day %}
     <section class="card cal" id="takvim" data-only="cal" hidden>
       <div class="cal-head">
-        <div><h3>Fiyat takvimi</h3><p class="xs sub" style="margin-top:2px">Her gün, o gün yola çıkarsan bulunan en ucuz gezi. Bir güne dokun, o günün gezilerini göstereyim.</p></div>
+        <h3>Fiyat takvimi</h3>
         <div class="legend" aria-hidden="true">Ucuz <i class="l0" style="background:var(--tint)"></i><i class="l1" style="background:var(--tint)"></i><i class="l2" style="background:var(--tint)"></i><i class="l3" style="background:var(--tint)"></i><i class="l4" style="background:var(--tint)"></i> Pahalı</div>
       </div>
       <div class="months">
@@ -372,8 +369,8 @@
 
     {% if not trips %}
     <div class="card empty">
-      <h2>Bu ölçütlere uyan gezi yok</h2>
-      <p>Tarih aralığını genişlet, gün sayısını esnet ya da hariç tuttuğun yerleri azalt. Bütçe koyduysan kaldırıp tekrar dene.</p>
+      <h2>Gezi bulunamadı</h2>
+      <p>Tarihleri ya da gün sayısını genişlet.</p>
     </div>
     {% else %}
     <div id="trips" class="results" data-only="list">
@@ -434,7 +431,6 @@
     {% if track %}
     <form class="track card" method="post" action="/takipler">
       <h3><svg class="ic" style="color:var(--brand)"><use href="#i-bell"/></svg>Bu aramayı takip et</h3>
-      <p class="sm sub">Birkaç saatte bir yeniden ararım. Fiyat hedefinin altına inerse ya da normalinden belirgin ucuzlarsa Telegram'dan haber veririm.</p>
       {% for k in ('origin', 'date_from', 'date_to', 'min_days', 'max_days', 'max_ground_hours', 'direct', 'same_city') %}{% if form[k] %}<input type="hidden" name="{{ k }}" value="{{ form[k] }}">{% endif %}{% endfor %}
       {% for t in form.to %}<input type="hidden" name="to" value="{{ t }}">{% endfor %}
       {% for t in form.not %}<input type="hidden" name="not" value="{{ t }}">{% endfor %}
@@ -447,7 +443,7 @@
         </div>
         <button class="btn btn-tint">Takibe al</button>
       </div>
-      <label class="switch">Tarihler kendiliğinden ilerlesin (hep önümüzdeki 60 gün)<input type="checkbox" name="rolling" checked></label>
+      <label class="switch">Tarihler ilerlesin (60 gün)<input type="checkbox" name="rolling" checked></label>
     </form>
     {% endif %}
     {% endif %}

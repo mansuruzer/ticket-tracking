@@ -2,10 +2,10 @@
 {% block title %}Giriş yap – UcuzGez{% endblock %}
 {% block style %}
   .login { max-width: 400px; margin: 10vh auto 0; display: grid; gap: var(--s3); text-align: center; }
-  .hero-mark { width: 76px; height: 76px; margin: 0 auto var(--s3); border-radius: 22px; display: grid; place-items: center; color: #4A40B2;
+  .hero-mark { width: 76px; height: 76px; margin: 0 auto var(--s3); border-radius: var(--r-card); display: grid; place-items: center; color: #4A40B2;
                background: linear-gradient(135deg, #DCD7FF 0%, #FFD9C7 100%); box-shadow: 0 18px 40px -18px rgba(106, 96, 216, .55); }
   .hero-mark .ic { width: 36px; height: 36px; stroke-width: 2; }
-  .login h1 { font-size: var(--t-2xl); letter-spacing: -0.035em; }
+  .login h1 { font-size: var(--t-2xl); letter-spacing: 0; }
   .login p { color: var(--sub); }
   .login form { padding: var(--s3); display: grid; gap: var(--s2); text-align: left; }
   .dots { display: flex; justify-content: center; gap: 6px; margin-top: var(--s2); }
@@ -16,7 +16,7 @@
   <div>
     <div class="hero-mark" aria-hidden="true"><svg class="ic"><use href="#i-plane"/></svg></div>
     <h1>Hesap girişi</h1>
-    <p style="margin-top:var(--s2)">Arama yapmak için giriş gerekmez, <a href="/">doğrudan aramaya geç</a>. Bu sayfa takip ve Telegram bildirimleri olan hesap içindir.</p>
+    <p style="margin-top:var(--s2)"><a href="/">Aramaya geç</a></p>
     <div class="dots" aria-hidden="true"><i style="background:var(--lav)"></i><i style="background:var(--mint)"></i><i style="background:var(--peach)"></i><i style="background:var(--sky)"></i><i style="background:var(--butter)"></i><i style="background:var(--rose)"></i></div>
   </div>
   {% if error %}<p class="notice notice-error" role="alert"><svg class="ic"><use href="#i-info"/></svg>{{ error }}</p>{% endif %}

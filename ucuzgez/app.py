@@ -36,7 +36,7 @@ scheduler = Scheduler(services, _notify)
 @asynccontextmanager
 async def lifespan(_app):
     if settings.provider == "mock":
-        log.warning("UG_PROVIDER=mock: DEMO veri kullanılıyor. Gerçek fiyatlar için TRAVELPAYOUTS_TOKEN ayarla.")
+        log.warning("UG_PROVIDER=mock: deneme verisi kullanılıyor. Gerçek fiyatlar için UG_PROVIDER=auto ve anahtarları ayarla.")
     threading.Thread(target=scheduler.run_forever, daemon=True, name="scheduler").start()
     if bot:
         threading.Thread(target=bot.run_forever, daemon=True, name="telegram").start()

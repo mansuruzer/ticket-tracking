@@ -82,7 +82,16 @@ class Services:
         return TripQuery(**p)
 
     # ---- arama -----------------------------------------------------------------
+    @property
+    def live(self) -> bool:
+        return self.s.provider != "mock"
+
     def plan(self, q: TripQuery) -> PlanResult:
+        prov = self.planner.search.provider
+        if self.live and not getattr(prov, "providers", [None]):
+            raise ValueError("Fiyat kaynağı bağlı değil. Yönetici TRAVELPAYOUTS_TOKEN ya da IGNAV_API_KEY eklemeli.")
+        if self.live and not q.destinations and all(p.name != "tp" for p in getattr(prov, "providers", [])):
+            raise ValueError("Her yere arama için Travelpayouts gerekiyor. Şimdilik hedef olarak bir şehir seç.")
         with self._lock:
             return self.planner.plan(q)
 
@@ -92,8 +101,6 @@ class Services:
                     "ya da başka bölge seçmeyi dene. " + " ".join(res.notes)).strip()
         parts = [trip_telegram(t, self.airports, self.s.currency, i) for i, t in enumerate(res.trips[:n], 1)]
         foot = f"\n<i>{res.destinations_scanned} şehir tarandı."
-        if self.s.provider == "travelpayouts":
-            foot += " Fiyatlar son 48 saatte görülen fiyatlar, almadan önce linkten kontrol et."
         if self.s.provider == "mock":
             foot += " Şu an deneme verisi, fiyatlar gerçek değil."
         foot += "</i>"
