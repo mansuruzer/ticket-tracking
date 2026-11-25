@@ -164,3 +164,13 @@ def test_admin_keeps_tracking_and_telegram(env):
     a, b = _range()
     assert "Bu aramayı takip et" in c.get(f"/ara?origin=IST&date_from={a}&date_to={b}&min_days=3&max_days=5").text
     assert "Telegram" in c.get("/ayarlar").text and 'href="/takipler"' in c.get("/").text
+
+
+def test_theme_controls_present(env):
+    _, _, c = env
+    home = c.get("/").text
+    assert 'id="theme-btn"' in home and ":root[data-theme=\"dark\"]" in home and "ug-theme" in home
+    page = c.get("/ayarlar").text
+    assert all(f'data-theme-set="{t}"' in page for t in ("auto", "light", "dark"))
+    c.cookies.clear()
+    assert 'id="theme-btn"' in c.get("/").text          # misafirde de var

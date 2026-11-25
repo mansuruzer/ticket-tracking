@@ -7,6 +7,15 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#F6F5FB" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111017" media="(prefers-color-scheme: dark)">
+<script>
+(function () {
+  var t = null; try { t = localStorage.getItem('ug-theme'); } catch (e) {}
+  if (t === 'light' || t === 'dark') {
+    document.documentElement.setAttribute('data-theme', t);
+    document.querySelectorAll('meta[name=theme-color]').forEach(function (m) { m.content = t === 'dark' ? '#111017' : '#F6F5FB'; });
+  }
+})();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -48,12 +57,14 @@
     --shadow: 0 1px 1px rgba(28, 26, 41, .03), 0 8px 24px -12px rgba(52, 44, 110, .14);
     --shadow-lift: 0 2px 4px rgba(28, 26, 41, .04), 0 18px 40px -18px rgba(52, 44, 110, .28);
     --bar: rgba(246, 245, 251, .72);
+    --on-brand: #FFFFFF; --switch-on: var(--mint-ink); --spark-down: var(--mint-ink);
     --ease: cubic-bezier(.22, 1, .36, 1);
     --spring: cubic-bezier(.34, 1.4, .64, 1);
     --font: "Century Gothic", CenturyGothic, "Didact Gothic", AppleGothic, "URW Gothic", sans-serif;
   }
+  /* koyu tema: Otomatik modda cihaz ayarına uyar; elle Açık/Koyu seçilebilir (html[data-theme]) */
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #111017; --bg-2: #16151E; --card: #1C1B25; --elev: #24232F;
       --fill: rgba(220, 218, 255, .07); --fill-2: rgba(220, 218, 255, .12);
       --sep: rgba(255, 255, 255, .08); --sep-strong: rgba(255, 255, 255, .15);
@@ -68,7 +79,25 @@
       --shadow: 0 0 0 1px rgba(255, 255, 255, .04);
       --shadow-lift: 0 0 0 1px rgba(255, 255, 255, .07), 0 18px 40px -18px rgba(0, 0, 0, .7);
       --bar: rgba(17, 16, 23, .72);
+      --on-brand: #15132A; --switch-on: #4CC08E; --spark-down: #6FD6A8;
     }
+  }
+  :root[data-theme="dark"] {
+      --bg: #111017; --bg-2: #16151E; --card: #1C1B25; --elev: #24232F;
+      --fill: rgba(220, 218, 255, .07); --fill-2: rgba(220, 218, 255, .12);
+      --sep: rgba(255, 255, 255, .08); --sep-strong: rgba(255, 255, 255, .15);
+      --text: #F3F2F9; --sub: #B5B2C6; --muted: #7C798F;
+      --brand: #9C94FF; --brand-hover: #B0AAFF; --brand-soft: rgba(156, 148, 255, .16); --brand-ink: #C9C4FF; --brand-ring: rgba(156, 148, 255, .30);
+      --lav: rgba(156, 148, 255, .16);  --lav-ink: #CBC6FF;
+      --mint: rgba(110, 214, 168, .14); --mint-ink: #9BE3C2;
+      --peach: rgba(255, 166, 122, .14); --peach-ink: #FFC2A3;
+      --sky: rgba(120, 180, 255, .14);  --sky-ink: #A9CFFF;
+      --butter: rgba(255, 214, 102, .13); --butter-ink: #FFDF8A;
+      --rose: rgba(255, 140, 180, .14); --rose-ink: #FFB3CD;
+      --shadow: 0 0 0 1px rgba(255, 255, 255, .04);
+      --shadow-lift: 0 0 0 1px rgba(255, 255, 255, .07), 0 18px 40px -18px rgba(0, 0, 0, .7);
+      --bar: rgba(17, 16, 23, .72);
+      --on-brand: #15132A; --switch-on: #4CC08E; --spark-down: #6FD6A8;
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -108,6 +137,13 @@
   .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700;
             background: var(--mint); color: var(--mint-ink); }
   .who a { color: var(--sub); text-decoration: none; }
+  .theme-btn { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: var(--r-ctl);
+               background: transparent; color: var(--sub); cursor: pointer; transition: background-color .2s ease, color .2s ease; }
+  .theme-btn:hover { background: var(--fill); color: var(--text); }
+  .theme-btn .ic { width: 19px; height: 19px; }
+  .theme-btn [data-show] { display: none; }
+  :root:not([data-theme]) .theme-btn [data-show="auto"], :root[data-theme="light"] .theme-btn [data-show="light"],
+  :root[data-theme="dark"] .theme-btn [data-show="dark"] { display: block; }
   .who a:hover { color: var(--text); }
 
   /* segment denetimi */
@@ -122,12 +158,10 @@
 
   .card { background: var(--card); border-radius: var(--r-card); box-shadow: var(--shadow); }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s1); min-height: 46px;
-         padding: 0 var(--s3); border: 0; border-radius: var(--r-ctl); background: var(--brand); color: #fff;
+         padding: 0 var(--s3); border: 0; border-radius: var(--r-ctl); background: var(--brand); color: var(--on-brand);
          font-family: inherit; font-weight: 600; font-size: var(--t-md); letter-spacing: 0; line-height: 1; cursor: pointer; text-decoration: none;
          transition: transform .3s var(--spring), background-color .2s ease, opacity .2s ease; }
-  @media (prefers-color-scheme: dark) { .btn { color: #15132A; } }
-  .btn:hover:not(:disabled) { background: var(--brand-hover); color: #fff; }
-  @media (prefers-color-scheme: dark) { .btn:hover:not(:disabled) { color: #15132A; } }
+  .btn:hover:not(:disabled) { background: var(--brand-hover); color: var(--on-brand); }
   .btn:active:not(:disabled) { transform: scale(.96); }
   .btn:disabled { opacity: .7; cursor: progress; }
   .btn-block { width: 100%; }
@@ -156,8 +190,7 @@
                   border-radius: 999px; background: var(--fill-2); cursor: pointer; transition: background-color .25s ease; }
   .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff;
                          box-shadow: 0 2px 6px rgba(0,0,0,.18), 0 0 0 .5px rgba(0,0,0,.04); transition: transform .3s var(--spring); }
-  .switch input:checked { background: var(--mint-ink); }
-  @media (prefers-color-scheme: dark) { .switch input:checked { background: #4CC08E; } }
+  .switch input:checked { background: var(--switch-on); }
   .switch input:checked::after { transform: translateX(18px); }
 
   .notice { display: flex; gap: 10px; align-items: flex-start; padding: var(--s2) var(--s3); border-radius: var(--r-ctl);
@@ -211,6 +244,9 @@
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/></symbol>
   <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+  <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" fill="currentColor" stroke="none"/></symbol>
   <symbol id="i-loc" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></symbol>
 </svg>
 
@@ -223,8 +259,8 @@
     {% if track %}<a href="/takipler" {% if page == 'takip' %}aria-current="page"{% endif %}>Takiplerim</a>{% endif %}
     <a href="/ayarlar" {% if page == 'ayar' %}aria-current="page"{% endif %}>Ayarlar</a>
   </nav>
-  {% if not guest %}<div class="who"><span class="name">{{ user.name }}</span><a href="/ayarlar" class="avatar" aria-label="Hesabım">{{ (user.name or '?')[:1]|upper }}</a></div>{% else %}<span></span>{% endif %}
-  {% else %}<span></span><span></span>{% endif %}
+  <div class="who"><button type="button" class="theme-btn" id="theme-btn" aria-label="Tema: otomatik" title="Tema"><svg class="ic" data-show="auto"><use href="#i-auto"/></svg><svg class="ic" data-show="light"><use href="#i-sun"/></svg><svg class="ic" data-show="dark"><use href="#i-moon"/></svg></button>{% if not guest %}<span class="name">{{ user.name }}</span><a href="/ayarlar" class="avatar" aria-label="Hesabım">{{ (user.name or '?')[:1]|upper }}</a>{% endif %}</div>
+  {% else %}<span></span><div class="who"><button type="button" class="theme-btn" id="theme-btn" aria-label="Tema: otomatik" title="Tema"><svg class="ic" data-show="auto"><use href="#i-auto"/></svg><svg class="ic" data-show="light"><use href="#i-sun"/></svg><svg class="ic" data-show="dark"><use href="#i-moon"/></svg></button></div>{% endif %}
 </header>
 </div>
 <main>{% block body %}{% endblock %}</main>
@@ -237,6 +273,26 @@
 {% endif %}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
+// tema: otomatik -> açık -> koyu
+window.setTheme = function (t) {
+  var root = document.documentElement;
+  if (t === 'light' || t === 'dark') root.setAttribute('data-theme', t); else root.removeAttribute('data-theme');
+  try { if (t === 'light' || t === 'dark') localStorage.setItem('ug-theme', t); else localStorage.removeItem('ug-theme'); } catch (e) {}
+  var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelectorAll('meta[name=theme-color]').forEach(function (m) { m.content = dark ? '#111017' : '#F6F5FB'; });
+  var label = { light: 'açık', dark: 'koyu' }[t] || 'otomatik';
+  document.querySelectorAll('#theme-btn').forEach(function (b) { b.setAttribute('aria-label', 'Tema: ' + label); });
+  document.querySelectorAll('[data-theme-set]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.themeSet === (t || 'auto'))); });
+  return label;
+};
+window.currentTheme = function () { return document.documentElement.getAttribute('data-theme') || 'auto'; };
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('#theme-btn');
+  if (b) { var next = { auto: 'light', light: 'dark', dark: 'auto' }[currentTheme()]; toast('Tema: ' + setTheme(next)); return; }
+  var s = e.target.closest('[data-theme-set]');
+  if (s) setTheme(s.dataset.themeSet);
+});
+setTheme(currentTheme());
 window.toast = function (msg) {
   var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(window.__tt); window.__tt = setTimeout(function () { t.classList.remove('show'); }, 2200);
